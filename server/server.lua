@@ -99,7 +99,7 @@ RegisterServerEvent('legacy_medic:takeitem', function(item, number)
     local playername = Character.firstname .. ' ' .. Character.lastname
     exports.vorp_inventory:addItem(_source, item, number)
     VORPcore.NotifyRightTip(_source, _U('Received') .. number .. _U('Of') .. item, 4000)
-    VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook, playername " took " .. number .. ' ' .. item)
+    VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook, playername .. " took " .. number .. ' ' .. item)
 end)
 
 RegisterServerEvent("legacy_medic:reviveplayer")
