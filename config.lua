@@ -1,6 +1,6 @@
 Config = {}
 
-Config.Locale = 'en'
+Config.defaultlang = 'en_lang'
 
 Config.BandageItems = {
     'Bandage',
@@ -11,16 +11,14 @@ Config.ReviveItems = {
     'SmellingSalts'
 }
 
-Config.Stitches =
-'NeedleandThread' --Can change to an equivalent item in your database or run the items.sql, icon in items folder, remember case sensitive
+Config.Stitches = 'NeedleandThread' --Can change to an equivalent item in your database or run the items.sql, icon in items folder, remember case sensitive
 Config.usewebhook = true
-Config.Webhook =
-'https://discord.com/api/webhooks/1076962921290141837/TONvqNJguapwj_zqSWUjjKVMg-kzJNzxRAd7jNb0AqyOwWgM8al9VFRh4AYSFU8OgsrF'
+Config.Webhook = ''
 Config.WebhookTitle = 'Medic'
 
 Config.Command = 'medic' -- Slash command to use in chat to open Medic Menu
 Config.gonegative = true -- Can you go negative paying for NPC revival
-Config.synsociety = true
+Config.synsociety = false
 
 Doctoroffices = {
     val = {
