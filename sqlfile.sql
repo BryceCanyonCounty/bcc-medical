@@ -1,0 +1,2 @@
+ALTER TABLE characters
+ADD COLUMN bleed INT DEFAULT 0;
