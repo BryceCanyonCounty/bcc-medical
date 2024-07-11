@@ -43,6 +43,5 @@ Features:
 -Added Config Options : `devMode` | `bleedChance` | `StopBleedOnRevive` | `AnimOnBleed` | `toHospital`
 -Added option to spawn on spot or send to hospital on NPC revive (`Config.doctors.toHospital`)
 -Fixed NPC not reviving players
--Added Config to disable NPC doctor (`Config.doctors.enabled`)
 -Changed `dmgtest` command to devMode only
 -Removed traces of `Outsider_needs`

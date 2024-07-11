@@ -265,18 +265,18 @@ RegisterCommand(Config.Command, function(source, args)
 	end
 end)
 
-if Config.doctors.enabled then
-	RegisterCommand(Config.doctors.command, function(source)
-		if not iscalled then
-			iscalled = true
-			TriggerServerEvent("legacy_medicalertjobs")
-			Wait(Config.doctors.timer)
-			iscalled = false
-		else
-			VORPcore.NotifyRightTip(_U('cooldown'), 4000)
-		end
-	end)
-end
+
+RegisterCommand(Config.doctors.command, function(source)
+	if not iscalled then
+		iscalled = true
+		TriggerServerEvent("legacy_medicalertjobs")
+		Wait(Config.doctors.timer)
+		iscalled = false
+	else
+		VORPcore.NotifyRightTip(_U('cooldown'), 4000)
+	end
+end)
+
 
 RegisterNetEvent('vorp:SelectedCharacter', function()
 	local player = GetPlayerServerId(tonumber(PlayerId()))

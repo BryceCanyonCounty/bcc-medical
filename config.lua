@@ -56,7 +56,6 @@ MedicJobs = {
 }
 
 Config.doctors = {
-    enabled = false,             -- Use NPC doctor ?
     ped = "u_m_m_rhddoctor_01", -- Model of NPC Doctor or choose other ped model below
     --am_valentinedoctors_females_01
     --cs_sddoctor_01
