@@ -215,7 +215,7 @@ CreateThread(function ()
         exports.vorp_inventory:registerUsableItem(v, function (data)
             TriggerClientEvent('legacy_medic:getclosestplayerbandage', data.source)
             exports.vorp_inventory:subItem(data.source, v, 1)
-            VORPcore.NotifyRightTip(data.source, "You used " .. Config.Bandage, 4000)
+            VORPcore.NotifyRightTip(data.source, "You used " .. v, 4000)
         end)
     end
 end)
