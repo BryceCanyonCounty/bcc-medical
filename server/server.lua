@@ -1,19 +1,6 @@
 
 local VORPcore = exports.vorp_core:GetCore() -- NEW includes  new callback system
 
-local Needs = {}
-
-TriggerEvent("Outsider_Needs", function(cb) -- to use in server only for security
-    Needs = cb
-end)
-
-local table = {
-    food = 25,
-    water = 25,
-    health = 25,
-}
-
-
 local stafftable = {}
 
 RegisterServerEvent('legacy_medic:checkjob', function()
@@ -69,8 +56,7 @@ RegisterServerEvent('legacy_medic:SetBleed', function(bleed)
         ['Charid'] = Charid,
         ['bleed'] = bleed
     }
-    exports.oxmysql:execute(
-        "UPDATE characters SET bleed=@bleed WHERE charidentifier=@Charid", param)
+    exports.oxmysql:execute("UPDATE characters SET bleed=@bleed WHERE charidentifier=@Charid", param)
 end)
 
 
@@ -112,7 +98,6 @@ AddEventHandler("legacy_medic:reviveplayer", function()
             Character.removeCurrency(0, Config.doctors.amount) -- Remove money 1000 | 0 = money, 1 = gold, 2 = rol
             VORPcore.NotifyRightTip(_source, _U('revived') .. Config.doctors.amount, 4000)
             TriggerClientEvent('legacy_medic:npcrevive', _source)
-            Needs.addStats(_source, table) -- send as a table
         else
             VORPcore.NotifyRightTip(_source, _U('notenough') .. Config.doctors.amount, 4000)
         end
@@ -120,7 +105,6 @@ AddEventHandler("legacy_medic:reviveplayer", function()
         Character.removeCurrency(0, Config.doctors.amount) -- Remove money 1000 | 0 = money, 1 = gold, 2 = rol
         VORPcore.NotifyRightTip(_source, _U('revived') .. Config.doctors.amount, 4000)
         TriggerClientEvent('legacy_medic:npcrevive', _source)
-        Needs.addStats(_source, table) -- send as a table
     else
         VORPcore.NotifyRightTip(_source, _U('notenough') .. Config.doctors.amount, 4000)
     end
@@ -138,10 +122,8 @@ AddEventHandler('legacy_medic:reviveclosestplayer', function(reviveitem,closestP
     if count > 0 then
         exports.vorp_inventory:subItem(_source, reviveitem, 1)
         TriggerClientEvent('legacy_medic:revive', closestPlayer)
-        Needs.addStats(_source, table) -- send as a table
         if Config.usewebhook then
-            VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook,
-                _U('Player_Syringe') .. playername .. _U('Used_Syringe') .. playname2)
+            VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook, _U('Player_Syringe') .. playername .. _U('Used_Syringe') .. playname2)
         end
     else
         VORPcore.NotifyRightTip(_source, _U('Missing') .. Config.Revive, 4000)
@@ -166,27 +148,20 @@ AddEventHandler('legacy_medic:StopBleedTemp', function(self, closestPlayer)
     local param = {
         ['Charid'] = Charid,
         ['targetid'] = targetid
-
     }
     if self then
-        local result = MySQL.query.await(
-            "SELECT bleed FROM characters WHERE charidentifier=@Charid", param)
+        local result = MySQL.query.await("SELECT bleed FROM characters WHERE charidentifier=@Charid", param)
         if result[1].bleed == 1 then
-            exports.oxmysql:execute(
-                "UPDATE characters SET bleed=0 WHERE charidentifier=@Charid", param)
+            exports.oxmysql:execute("UPDATE characters SET bleed=0 WHERE charidentifier=@Charid", param)
             Wait(60000 * 60 * 6)
-            exports.oxmysql:execute(
-                "UPDATE characters SET bleed=1 WHERE charidentifier=@Charid", param)
+            exports.oxmysql:execute("UPDATE characters SET bleed=1 WHERE charidentifier=@Charid", param)
         end
     else
-        local result = MySQL.query.await(
-            "SELECT bleed FROM characters WHERE charidentifier=@targetid", param)
+        local result = MySQL.query.await("SELECT bleed FROM characters WHERE charidentifier=@targetid", param)
         if result[1].bleed == 1 then
-            exports.oxmysql:execute(
-                "UPDATE characters SET bleed=0 WHERE charidentifier=@targetid", param)
+            exports.oxmysql:execute("UPDATE characters SET bleed=0 WHERE charidentifier=@targetid", param)
             Wait(60000 * 60 * 6)
-            exports.oxmysql:execute(
-                "UPDATE characters SET bleed=1 WHERE charidentifier=@targetid", param)
+            exports.oxmysql:execute("UPDATE characters SET bleed=1 WHERE charidentifier=@targetid", param)
         end
     end
 end)
@@ -207,11 +182,9 @@ AddEventHandler('legacy_medic:StopBleedPerm', function(self, closestPlayer)
 
     }
     if self then
-        exports.oxmysql:execute(
-            "UPDATE characters SET bleed=0 WHERE charidentifier=@Charid", param)
+        exports.oxmysql:execute("UPDATE characters SET bleed=0 WHERE charidentifier=@Charid", param)
     else
-        exports.oxmysql:execute(
-            "UPDATE characters SET bleed=0 WHERE charidentifier=@targetid", param)
+        exports.oxmysql:execute("UPDATE characters SET bleed=0 WHERE charidentifier=@targetid", param)
     end
 end)
 
@@ -223,8 +196,7 @@ AddEventHandler('legacy_medic:CheckBleed', function()
     local param = {
         ['Charid'] = Charid
     }
-    local result = MySQL.query.await(
-        "SELECT bleed FROM characters WHERE charidentifier=@Charid", param)
+    local result = MySQL.query.await("SELECT bleed FROM characters WHERE charidentifier=@Charid", param)
     TriggerClientEvent('legacy_medic:SendBleed', _source, result[1].bleed)
 end)
 
@@ -263,3 +235,20 @@ function CheckTable(table, element)
     end
     return false
 end
+
+RegisterNetEvent("vorp_core:Server:OnPlayerRevive",function()
+    if Config.StopBleedOnRevive then
+        local _source = source
+        local Char = VORPcore.getUser(_source).getUsedCharacter
+        local Charid = Char.charIdentifier
+        local param = {
+            ['Charid'] = Charid
+        }
+
+        exports.oxmysql:execute("UPDATE characters SET bleed=0 WHERE charidentifier=@Charid", param)
+        if Config.devMode then 
+            print('Stopped Bleding for',GetPlayerName(_source)) 
+        end
+    end
+end)
+

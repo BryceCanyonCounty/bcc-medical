@@ -1,6 +1,17 @@
 Config = {}
 
+Config.devMode = false -- Allows Reload of script for development
+
 Config.defaultlang = 'en_lang'
+
+Config.bleedChance = 85 -- Chance of bleed (lower - easier, higher - harder)
+
+Config.StopBleedOnRevive = true -- Stops Player Bleeding on Revive
+
+-- Used in case of temp bleed stop (Not yet Implemented)
+Config.EnableBleedAfter = 0
+
+Config.AnimOnBleed = true -- should Player animate on bleed
 
 Config.BandageItems = {
     'Bandage',
@@ -44,18 +55,16 @@ MedicJobs = {
     "shaman"
 }
 
-
-
 Config.doctors = {
-    ped =
-    "u_m_m_rhddoctor_01", -- Model of NPC Doctor or choose other ped model below
+    ped = "u_m_m_rhddoctor_01", -- Model of NPC Doctor or choose other ped model below
     --am_valentinedoctors_females_01
     --cs_sddoctor_01
     --cs_creoledoctor
     --u_m_m_rhddoctor_01
     --u_m_m_valdoctor_01
 
-    command = "sendhelp", -- Command to Call for NPC Doctor
-    amount = 45,          -- Payment for Revive from NPC Doctor
-    timer = 60000 * 1     -- put how many minutes you'd like ie 60000 * 5 for 5 minutes
+    command = "sendhelp",   -- Command to Call for NPC Doctor
+    amount = 45,            -- Payment for Revive from NPC Doctor
+    timer = 60000 * 1,      -- put how many minutes you'd like ie 60000 * 5 for 5 minutes
+    toHospital = true       -- if true, player will be respawned to nearby hospital else will be revived on spot
 }

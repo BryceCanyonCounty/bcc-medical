@@ -37,8 +37,8 @@ Citizen.CreateThread(function()
 			for i = 0, size - 1 do
 				local eventAtIndex = GetEventAtIndex(0, i)
 
-				if eventAtIndex == 402722103 then      -- if eventAtIndex == GetHashKey("EVENT_CARRIABLE_UPDATE_CARRY_STATE")
-					local eventDataSize = 9            -- for EVENT_CARRIABLE_UPDATE_CARRY_STATE data size is 5. Check table below.
+				if eventAtIndex == `EVENT_ENTITY_DAMAGED` then      
+					local eventDataSize = 9  
 
 					local eventDataStruct = DataView.ArrayBuffer(128) -- buffer must be 8*eventDataSize or bigger
 					eventDataStruct:SetInt32(0, 0)     -- 8*0 offset for 0 element of eventData
@@ -53,8 +53,7 @@ Citizen.CreateThread(function()
 
 					-- etc +8 offset for each next element (if data size is bigger then 5)
 
-					local is_data_exists = Citizen.InvokeNative(0x57EC5FA4D4D6AFCA, 0, i, eventDataStruct:Buffer(),
-						eventDataSize)          -- GET_EVENT_DATA
+					local is_data_exists = Citizen.InvokeNative(0x57EC5FA4D4D6AFCA, 0, i, eventDataStruct:Buffer(), eventDataSize)          -- GET_EVENT_DATA
 					local Player = eventDataStruct:GetInt32(0) -- 8*1 offset for 1 element of eventData
 					if is_data_exists and Player == PlayerPedId() then
 						DamageHash = eventDataStruct:GetInt32(16)
@@ -76,8 +75,10 @@ end)
 RegisterNetEvent('legacy_medic:ApplyBleed', function()
 	math.randomseed(GetGameTimer())
 	local chancetobleed = math.random(100)
-	print(chancetobleed)
-	if chancetobleed >= 85 then
+	if Config.devMode then 
+		print('Bleed Chance',chancetobleed) 
+	end
+	if chancetobleed >= Config.bleedChance then
 		TriggerServerEvent('legacy_medic:SetBleed', 1)
 	end
 end)
@@ -87,14 +88,10 @@ RegisterNetEvent('legacy_medic:SendBleed', function(isbleeding)
 end)
 
 
-
-
-
-
 Citizen.CreateThread(function()
 	SetupUsePrompt()
 	while true do
-		Wait(0)
+		Wait(1)
 		local ped = PlayerPedId()
 		local pedpos = GetEntityCoords(PlayerPedId(), true)
 		local isDead = IsEntityDead(ped)
@@ -268,6 +265,7 @@ RegisterCommand(Config.Command, function(source, args)
 	end
 end)
 
+
 RegisterCommand(Config.doctors.command, function(source)
 	if not iscalled then
 		iscalled = true
@@ -278,6 +276,7 @@ RegisterCommand(Config.doctors.command, function(source)
 		VORPcore.NotifyRightTip(_U('cooldown'), 4000)
 	end
 end)
+
 
 RegisterNetEvent('vorp:SelectedCharacter', function()
 	local player = GetPlayerServerId(tonumber(PlayerId()))
@@ -290,7 +289,32 @@ RegisterNetEvent('vorp:SelectedCharacter', function()
 			Wait(1000 * 20)
 			TriggerServerEvent('legacy_medic:CheckBleed')
 			Wait(250)
-			if IsBleeding == 1 then
+			if IsBleeding == 1 and Config.AnimOnBleed then
+				Citizen.InvokeNative(0x835F131E7DC8F97A, PlayerPedId(), -25.00, 0, GetHashKey("weapon_bleeding"))
+				if not IsEntityPlayingAnim(PlayerPedId(), "amb_wander@upperbody_idles@sick@both_arms@male_a@idle_a", "idle_b", 3) then
+					RequestAnimDict('amb_wander@upperbody_idles@sick@both_arms@male_a@idle_a')
+					while not HasAnimDictLoaded('amb_wander@upperbody_idles@sick@both_arms@male_a@idle_a') do
+						Citizen.Wait(100)
+					end
+					TaskPlayAnim(PlayerPedId(), "amb_wander@upperbody_idles@sick@both_arms@male_a@idle_a", "idle_b", 5.0, 1.0 , 4000, 31, 0)
+				end
+			end
+		end
+	end)
+end)
+
+if Config.devMode then
+	local player = GetPlayerServerId(tonumber(PlayerId()))
+	Wait(100)
+	TriggerServerEvent("legacy_medic:sendPlayers", player)
+
+
+	CreateThread(function()
+		while true do
+			Wait(1000)
+			TriggerServerEvent('legacy_medic:CheckBleed')
+			Wait(250)
+			if IsBleeding == 1 and Config.AnimOnBleed then
 				Citizen.InvokeNative(0x835F131E7DC8F97A, PlayerPedId(), -25.00, 0, GetHashKey("weapon_bleeding"))
 				if not IsEntityPlayingAnim(PlayerPedId(), "amb_wander@upperbody_idles@sick@both_arms@male_a@idle_a", "idle_b", 3) then
 					RequestAnimDict('amb_wander@upperbody_idles@sick@both_arms@male_a@idle_a')
@@ -304,7 +328,11 @@ RegisterNetEvent('vorp:SelectedCharacter', function()
 			end
 		end
 	end)
-end)
+
+	RegisterCommand("dmgtest", function()
+		Citizen.InvokeNative(0x835F131E7DC8F97A, PlayerPedId(), -10.00, 0, GetHashKey("weapon_pistol_mauser"))
+	end)
+end
 
 MenuData = {}
 TriggerEvent("menuapi:getData", function(call)
@@ -328,10 +356,7 @@ function DamageHashCheck(DamageHash)
 	return DamageHash
 end
 
-RegisterCommand("dmgtest", function()
-	local cl = PlayerPedId()
-	Citizen.InvokeNative(0x835F131E7DC8F97A, cl, -10.00, 0, GetHashKey("weapon_pistol_mauser"))
-end)
+
 
 function MedicMenu() -- Base Police Menu Logic
 	local Elements = {}
@@ -598,13 +623,16 @@ end)
 
 RegisterNetEvent("legacy_medic:revive")
 AddEventHandler("legacy_medic:revive", function()
-	TriggerEvent('vorp:resurrectPlayer', source)
+	TriggerEvent('vorp:resurrectPlayer')
 end)
 
 RegisterNetEvent("legacy_medic:npcrevive")
 AddEventHandler("legacy_medic:npcrevive", function()
-	TriggerServerEvent('legacy_medic:StopBleedPerm', true, nil)
-	TriggerEvent('vorp_core:respawnPlayerAI')
+	if Config.doctors.toHospital then
+		TriggerEvent('vorp_core:respawnPlayer')
+	else
+		TriggerEvent('vorp:resurrectPlayer')
+	end
 end)
 
 function DrawText3D(x, y, z, text)
