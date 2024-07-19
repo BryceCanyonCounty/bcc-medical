@@ -15,6 +15,7 @@ shared_script {
 }
 
 client_scripts {
+    'client/functions.lua',
     'client/client.lua',
     'dataview.lua',
     'client/Weapons.lua'
