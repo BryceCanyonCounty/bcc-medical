@@ -30,13 +30,18 @@ end
 local lastDocCheckTime = 0
 local sendNpcOverride = false
 local preventNpc = false
+local callDoctorPlayer = nil
 
 -- Register the /sendNpc command
 RegisterCommand('sendNpc', function(source, args, rawCommand)
     if CheckTable(Config.MedicJobs, VORPcore.getUser(source).getUsedCharacter.job) then
         sendNpcOverride = true
-        TriggerClientEvent('legacy_medic:finddoc', source)
-        lastDocCheckTime = os.time() -- Reset the timer to prevent duplicate NPCs
+        if callDoctorPlayer then
+            TriggerClientEvent('legacy_medic:finddoc', callDoctorPlayer)  -- Send NPC to the player who called the doctor
+            lastDocCheckTime = os.time() -- Reset the timer to prevent duplicate NPCs
+        else
+            VORPcore.NotifyRightTip(source, _U('no_player_called'), 4000)  -- Notify if no player called the doctor
+        end
     end
 end, false)
 
@@ -48,12 +53,15 @@ RegisterCommand('cp', function(source, args, rawCommand)
     end
 end, false)
 
-RegisterServerEvent("legacy_medicalertjobs", function()
-    devPrint("Alerting for medical jobs status.")
+RegisterServerEvent("legacy_medicalertjobs")
+AddEventHandler("legacy_medicalertjobs", function()
     local src = source
+    callDoctorPlayer = src  -- Track the player who called the doctor
     local docs = 0
     local currentTime = os.time()
+    local pos = GetEntityCoords(GetPlayerPed(src))
 
+    devPrint("Alerting for medical jobs status.")
     devPrint("Config.synsociety: " .. tostring(Config.synsociety))
     if Config.synsociety then
         local isDoctorOnDuty = CheckPlayer(stafftable, Config.MedicJobs[1]) or CheckPlayer(stafftable, Config.MedicJobs[2])
@@ -63,13 +71,12 @@ RegisterServerEvent("legacy_medicalertjobs", function()
             devPrint("Doctor is active on duty.")
             lastDocCheckTime = currentTime -- Reset the timer since a doctor is found
         else
-            TriggerClientEvent('legacy_medic:finddoc', src)
+            TriggerClientEvent('legacy_medic:finddoc', src, pos)
         end
     else
         for z, m in ipairs(GetPlayers()) do
             local User = VORPcore.getUser(m)
             local used = User.getUsedCharacter
-            local pos = GetEntityCoords(GetPlayerPed(src))
             if CheckTable(Config.MedicJobs, used.job) then
                 docs = docs + 1
                 devPrint("Doctor found: " .. User.getIdentifier())
@@ -83,7 +90,7 @@ RegisterServerEvent("legacy_medicalertjobs", function()
                 CreateThread(function()
                     Wait(60000) -- Wait for 60 seconds
                     if docs == 0 and not preventNpc then
-                        TriggerClientEvent('legacy_medic:finddoc', src)
+                        TriggerClientEvent('legacy_medic:finddoc', src, pos)
                         devPrint("Sending NPC Doctor after 1 minute.")
                         lastDocCheckTime = os.time() -- Reset the timer after triggering the event
                     else
@@ -91,7 +98,7 @@ RegisterServerEvent("legacy_medicalertjobs", function()
                     end
                 end)
             else
-                TriggerClientEvent('legacy_medic:finddoc', src)
+                TriggerClientEvent('legacy_medic:finddoc', src, pos)
                 devPrint("Sending NPC Doctor immediately due to sendNpcOverride.")
                 lastDocCheckTime = os.time() -- Reset the timer after triggering the event
                 sendNpcOverride = false

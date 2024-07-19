@@ -138,7 +138,7 @@ function RevivePlayer(playerPed)
     end
 end
 
-function SpawnNPC()
+function SpawnNPC(coords)
     local model = GetHashKey(Config.doctors.ped)
     RequestModel(model)
     if not HasModelLoaded(model) then
@@ -147,8 +147,8 @@ function SpawnNPC()
     while not HasModelLoaded(model) or HasModelLoaded(model) == 0 or model == 1 do
         Citizen.Wait(1)
     end
-
-    local coords = GetEntityCoords(PlayerPedId())
+    
+	local coords = GetEntityCoords(PlayerPedId())
     local randomAngle = math.rad(math.random(0, 360))
     x = coords.x + math.sin(randomAngle) * math.random(1, 100) * 0.3
     y = coords.y + math.cos(randomAngle) * math.random(1, 100) * 0.3 -- End Number multiplied by is radius to player
@@ -197,10 +197,10 @@ function SpawnNPC()
 end
 
 RegisterNetEvent('legacy_medic:finddoc')
-AddEventHandler('legacy_medic:finddoc', function()
+AddEventHandler('legacy_medic:finddoc', function(coords)
     if IsEntityDead(PlayerPedId()) then
         VORPcore.NotifyRightTip(_U('calldoctor'), 4000)
-        SpawnNPC()
+        SpawnNPC(coords)
     else
         VORPcore.NotifyRightTip(_U('notdead'), 4000)
     end
@@ -264,18 +264,17 @@ RegisterCommand(Config.Command, function(source, args)
     end
 end, false)
 
--- Register the command using RegisterCommand
-RegisterCommand(Config.doctors.command, function(source, args)
+-- Register the /callDoctor command
+RegisterCommand(Config.doctors.command, function()
     if not iscalled then
         iscalled = true
-        TriggerServerEvent("legacy_medicalertjobs")
+        TriggerServerEvent("legacy_medicalertjobs")  -- Notify the server
         Wait(Config.doctors.timer)
         iscalled = false
     else
-     VORPcore.NotifyRightTip(_U('cooldown'), 4000)
+        VORPcore.NotifyRightTip(_U('cooldown'), 4000)
     end
 end, false) -- The 'false' parameter indicates that the command is not restricted
-
 
 RegisterNetEvent('vorp:SelectedCharacter', function()
     local player = GetPlayerServerId(tonumber(PlayerId()))
