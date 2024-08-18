@@ -53,6 +53,7 @@ Locales["en_lang"] = {
     cooldown = "Please wait ",
     Wound = "My Wound: ",
     ClosestWound = "Closest Persons Wound: ",
+    WoundDesc = "The last wound appears to be  ",
     --Addictions
     AddictionMenu = 'Addictions',
     NeedMoreOpiods = 'You need more Opiods',
