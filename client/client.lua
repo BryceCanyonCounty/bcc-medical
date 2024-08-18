@@ -561,7 +561,7 @@ function CabinetMenu() -- Base Police Menu Logic
 			if (data.current.value == 'takestim') then
 				TriggerEvent("vorpinputs:advancedInput", json.encode(myInput), function(result)
 					if result ~= "" or result then -- making sure its not empty or nil
-						TriggerServerEvent('legacy_medic:takeitem', "NeedleandThread", result)
+						TriggerServerEvent('legacy_medic:takeitem', "NeedleandThread", tonumber(result))
 					else
 						print("its empty?") -- notify
 					end
