@@ -1,6 +1,6 @@
 Config = {}
 
-Config.devMode = true -- Allows Reload of script for development
+Config.devMode = false -- Allows Reload of script for development
 
 Config.defaultlang = 'en_lang'
 
