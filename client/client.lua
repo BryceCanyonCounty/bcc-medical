@@ -1,16 +1,11 @@
-local VORPcore = exports.vorp_core:GetCore()
-local Menu = exports.vorp_menu:GetMenuData()
-
 local PromptGroup = GetRandomIntInRange(0, 0xffffff)
 local UsePrompt
-local HealthCheck = false
-local CreatedPed = 0
-local DamageBone = _U('None')
-local DamageBoneSelf = _U('None')
 local HasJob = false
-local InMenu = false
 local IsCalled = false
-local DamageHash = nil
+local CreatedPed = 0
+DamageBone = _U('None')
+DamageBoneSelf = _U('None')
+DamageHash = nil
 
 local function SetupUsePrompt()
 	UsePrompt = PromptRegisterBegin()
@@ -89,7 +84,7 @@ CreateThread(function()
 		local playerCoords = GetEntityCoords(PlayerPedId(), true)
         local sleep = 1000
 
-        if InMenu or IsEntityDead(playerPed) then goto END end
+        if IsEntityDead(playerPed) then goto END end
 
 		for _, officeCfg in pairs(Offices) do
             local distance = #(playerCoords - officeCfg.coords)
@@ -100,7 +95,6 @@ CreateThread(function()
 					CheckPlayerJob()
                     if HasJob then
                         CabinetMenu()
-                        InMenu = true
                     else
                         VORPcore.NotifyRightTip(_U('you_do_not_have_job'), 4000)
                     end
@@ -206,14 +200,14 @@ function SpawnNPC()
         if Config.doctors.toHospital then
             DoScreenFadeOut(800)
             Wait(800)
-            TriggerEvent('vorp_core:respawnPlayer')
+            TriggerServerEvent('bcc-medical:RespawnPlayer')
             while IsScreenFadedOut do
                 Wait(50)
             end
         else
             DoScreenFadeOut(800)
             Wait(800)
-            TriggerEvent('vorp:resurrectPlayer')
+            TriggerServerEvent('bcc-medical:RevivePlayer')
             Wait(800)
             DoScreenFadeIn(800)
         end
@@ -229,7 +223,7 @@ RegisterNetEvent('bcc-medical:FindDoc', function()
 	end
 end)
 
-local function GetClosestPlayer()
+function GetClosestPlayer()
     local players = GetActivePlayers()
     local player = PlayerId()
     local coords = GetEntityCoords(PlayerPedId())
@@ -265,10 +259,6 @@ RegisterNetEvent('bcc-medical:GetClosestPlayerHeal', function(perm)
 	else
 		TriggerServerEvent('bcc-medical:StopBleed', true, nil, perm)
 	end
-end)
-
-RegisterNetEvent("bcc-medical:Revive", function()
-    TriggerEvent('vorp:resurrectPlayer')
 end)
 
 RegisterCommand(Config.Command, function(source, args, rawCommand)
@@ -330,7 +320,7 @@ else
     MonitorBleed()
 end
 
-local function DamageHashCheck()
+function DamageHashCheck()
 	if DamageHash == -842959696 then
 		DamageHash = 'appear to be hurt'
 	elseif DamageHash == 1885857703 or DamageHash == -544306709 then
@@ -347,224 +337,8 @@ local function DamageHashCheck()
 	return DamageHash
 end
 
-function MedicMenu()
-    Menu.CloseAll()
-	local Elements = {}
-	local playerPed = PlayerPedId()
-	local closestPlayer, closestDistance = GetClosestPlayer()
-	local closestPlayerPed = GetPlayerPed(closestPlayer)
-	local closesthit, closestbone = GetPedLastDamageBone(closestPlayerPed)
-	local hit, bone = GetPedLastDamageBone(playerPed)
-	if DamageHash == nil then DamageHash = 'None' end
-
-	TriggerEvent("bcc-medical:CheckPart", bone)
-	if closestPlayer ~= -1 and closestDistance <= 3.0 then
-		TriggerEvent("bcc-medical:CheckPartOther", closestbone)
-		Wait(1000)
-		table.insert(Elements, {
-			label = _U('ClosestInjury') .. DamageBone,
-			value = 'lastwound',
-			desc = _U('ClosestInjuryDesc') .. DamageBone
-		})
-	end
-
-	Elements = {
-		{
-			label = _U('InjuredPart') .. DamageBoneSelf,
-			value = 'lastwoundself',
-			desc = _U('InjuredPartDesc') .. DamageBoneSelf
-		},
-		{
-			label = _U('Wound') .. DamageHashCheck(),
-			value = 'wound',
-			desc = _U('WoundDesc')
-		},
-	}
-
-	Menu.Open('default', GetCurrentResourceName(), 'vorp_menu_medic',
-    {
-        title    = _U('PlayerMenu'),
-        align    = 'top-left',
-        elements = Elements,
-    },
-    function(data, menu)
-        if (data.current.value == 'lastwound') then
-            if closestPlayer ~= -1 and closestDistance <= 3.0 then
-                if HealthCheck == false then
-                    HealthCheck = true
-                    hit, closestbone = GetPedLastDamageBone(closestPlayerPed)
-                    TriggerEvent("bcc-medical:CheckPartOther", closestbone)
-                else
-                    HealthCheck = false
-                end
-            end
-            MedicMenu()
-        end
-        if (data.current.value == 'lastwoundself') then
-            if HealthCheck == false then
-                HealthCheck = true
-                hit, bone = GetPedLastDamageBone(PlayerPedId())
-                TriggerEvent("bcc-medical:CheckPart", bone)
-            else
-                HealthCheck = false
-            end
-            MedicMenu()
-        end
-    end,
-    function(data, menu)
-        DamageBone = _U('None')
-        DamageBoneSelf = _U('None')
-        menu.close()
-    end)
-end
-
-function DoctorMenu()
-    Menu.CloseAll()
-	local DocElements = {}
-	local playerPed = PlayerPedId()
-	local health = GetEntityHealth(playerPed)
-	local pulse = health / 4 + math.random(20, 30)
-	local closestPlayer, closestDistance = GetClosestPlayer()
-	local closestPlayerPed = GetPlayerPed(closestPlayer)
-	local patienthealth = GetEntityHealth(closestPlayerPed)
-	local patientpulse = patienthealth / 4 + math.random(20, 30)
-
-	local closesthit, closestbone = GetPedLastDamageBone(closestPlayerPed)
-	local hit, bone = GetPedLastDamageBone(PlayerPedId())
-	if DamageHash == nil then DamageHash = 'None' end
-
-	TriggerEvent("bcc-medical:CheckPart", bone)
-	if closestPlayer ~= -1 and closestDistance <= 3.0 then
-		TriggerEvent("bcc-medical:CheckPartOther", closestbone)
-		Wait(1000)
-		table.insert(DocElements, {
-			label = _U('ClosestInjury') .. DamageBone,
-			value = 'lastwound',
-			desc = _U('ClosestInjuryDesc') .. DamageBone
-		})
-		table.insert(DocElements, {
-			label = _U('ClosestWound') .. DamageHashCheck(),
-			value = 'wound',
-			desc = _U('WoundDesc')
-		})
-		table.insert(DocElements,
-			{
-				label = _U('PatientPulse') .. patientpulse,
-				value = 'patientpulse',
-				desc = _U('PatientPulse') .. patientpulse
-			}
-		)
-	end
-	DocElements = {
-		{ label = _U('Pulse') .. pulse, value = 'pulse', desc = _U('Pulse') },
-		{
-			label = _U('InjuredPart') .. DamageBoneSelf,
-			value = 'lastwoundself',
-			desc = _U('InjuredPartDesc') .. DamageBoneSelf
-		},
-		{
-			label = _U('Wound') .. DamageHashCheck(),
-			value = 'wound',
-			desc = _U('WoundDesc')
-		},
-	}
-
-	Menu.Open('default', GetCurrentResourceName(), 'vorp_menu_doctor',
-    {
-        title    = _U('DoctorMenu'),
-        align    = 'top-left',
-        elements = DocElements,
-    },
-    function(data, menu)
-        if (data.current.value == 'lastwound') then
-            if closestPlayer ~= -1 and closestDistance <= 3.0 then
-                if HealthCheck == false then
-                    HealthCheck = true
-                    hit, closestbone = GetPedLastDamageBone(closestPlayerPed)
-                    TriggerEvent("bcc-medical:CheckPartOther", closestbone)
-                else
-                    HealthCheck = false
-                end
-            end
-            DoctorMenu()
-        end
-        if (data.current.value == 'lastwoundself') then
-            if HealthCheck == false then
-                HealthCheck = true
-                hit, bone = GetPedLastDamageBone(playerPed)
-                TriggerEvent("bcc-medical:CheckPart", bone)
-            else
-                HealthCheck = false
-            end
-            DoctorMenu()
-        end
-    end,
-    function(data, menu)
-        DamageBone = _U('None')
-        DamageBoneSelf = _U('None')
-        menu.close()
-    end)
-end
-
-function CabinetMenu()
-	Menu.CloseAll()
-
-    local elements
-    if Config.PropCrafting then
-        elements = {
-            { label = _U('Stitch'), value = 'takestim' },
-            { label = "Doctor Bag", value = 'takebag', desc = "Doctor Bag" },
-        }
-    else
-        elements = {
-            { label = _U('Stitch'), value = 'takestim' },
-        }
-    end
-
-	local myInput = {
-		type = "enableinput",                                      -- don't touch
-		inputType = "input",                                       -- input type
-		button = _U('Button'),                                     -- button name
-		placeholder = _U('Placeholder'),                           -- placeholder name
-		style = "block",                                           -- don't touch
-		attributes = {
-			inputHeader = _U('Amount'),                            -- header
-			type = "text",                                         -- inputype text, number,date,textarea ETC
-			pattern = "[0-9]",                                     --  only numbers "[0-9]" | for letters only "[A-Za-z]+"
-			title = _U('NumOnly'),                                 -- if input doesnt match show this message
-			style = "border-radius: 10px; background-color: ; border:none;" -- style
-		}
-	}
-
-	Menu.Open('default', GetCurrentResourceName(), 'vorp_menu_cabinet',
-    {
-        title    = _U('CabinetMenu'),
-        subtext  = _U('CabinetDesc'),
-        align    = 'top-left',
-        elements = elements,
-    },
-    function(data, menu)
-        if (data.current.value == 'takestim') then
-            TriggerEvent("vorpinputs:advancedInput", json.encode(myInput), function(result)
-                if result ~= "" or result then -- making sure its not empty or nil
-                    TriggerServerEvent('bcc-medical:TakeItem', "NeedleandThread", tonumber(result))
-                else
-                    print("its empty?") -- notify
-                end
-            end)
-        end
-
-        if (data.current.value == 'takebag') then
-            TriggerServerEvent('bcc-medical:TakeItem', "Doctor_Bag", 1)
-        end
-    end,
-    function(data, menu)
-        InMenu = false
-        menu.close()
-    end)
-end
-
-AddEventHandler('bcc-medical:CheckPart', function(bone)
+-- Function to check part and set damageboneself based on the bone parameter
+function CheckPartSelf(bone)
 	if bone == 6884 or bone == 43312 then
 		DamageBoneSelf = _U('RightLeg')
 	elseif bone == 65478 or bone == 55120 or bone == 45454 then
@@ -582,9 +356,10 @@ AddEventHandler('bcc-medical:CheckPart', function(bone)
 	elseif bone == 0 then
 		DamageBoneSelf = "None"
 	end
-end)
+end
 
-AddEventHandler('bcc-medical:CheckPartOther', function(bone)
+-- Function to check part and set damagebone based on the bone parameter
+function CheckPartOther(bone)
 	if bone == 6884 or bone == 43312 then
 		DamageBone = _U('RightLeg')
 	elseif bone == 65478 or bone == 55120 or bone == 45454 then
@@ -602,7 +377,7 @@ AddEventHandler('bcc-medical:CheckPartOther', function(bone)
 	elseif bone == 0 then
 		DamageBone = "None"
 	end
-end)
+end
 
 function GetPlayers()
 	local players = {}
