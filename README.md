@@ -36,8 +36,7 @@ Planned to come: Checking cause of death plus some pretty UI stuff and more! ;)
 ## Dependencies
 - [vorp_core](https://github.com/VORPCORE/vorp-core-lua)
 - [vorp_inventory](https://github.com/VORPCORE/vorp_inventory-lua)
-- [vorp_inputs](https://github.com/VORPCORE/vorp_inputs-lua)
-- [vorp_menu](https://github.com/VORPCORE/vorp_menu)
+- [feather-menu](https://github.com/FeatherFramework/feather-menu/releases)
 - [bcc-utils](https://github.com/BryceCanyonCounty/bcc-utils)
 
 ## Installation
@@ -45,7 +44,6 @@ Planned to come: Checking cause of death plus some pretty UI stuff and more! ;)
 - Add `bcc-medical` folder to your resources folder
 - Add `ensure bcc-medical` to your `resources.cfg`
 - Run the included database file
--- Add images from `img` folder to: `...\vorp_inventory\html\img\items` 
 - Restart server
 
 ## GitHub

@@ -159,7 +159,8 @@ RegisterNetEvent('bcc-medical:ReviveClosestPlayer', function(reviveItem, closest
 
     if count > 0 then
         exports.vorp_inventory:subItem(_source, reviveItem, 1)
-        TriggerClientEvent('bcc-medical:Revive', closestPlayer)
+        --TriggerClientEvent('bcc-medical:Revive', closestPlayer)
+        TriggerEvent('bcc-medical:RevivePlayer', closestPlayer)
         if Config.usewebhook then
             VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook, _U('Player_Syringe') .. playerName .. _U('Used_Syringe') .. targetName)
         end
@@ -256,18 +257,44 @@ exports.vorp_inventory:registerUsableItem(Config.Stitches, function(data)
     VORPcore.NotifyRightTip(_source, _U('You_Used') .. stitches, 4000)
 end)
 
-RegisterNetEvent("vorp_core:Server:OnPlayerRevive",function()
-    if Config.StopBleedOnRevive then
-        local _source = source
-        local user = VORPcore.getUser(_source)
-        if not user then return end
-        local Char = user.getUsedCharacter
-        local identifier = Char.identifier
-        local Charid = Char.charIdentifier
+RegisterServerEvent('bcc-medical:RevivePlayer', function(source)
+    local _source = source
+    local user = VORPcore.getUser(_source)
+    if not user then return end
 
-        MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, Charid, identifier })
-        if Config.devMode then
-            print('Stopped Bleding for',GetPlayerName(_source))
-        end
+    VORPcore.Player.Revive(_source)
+end)
+
+RegisterServerEvent('bcc-medical:RespawnPlayer', function()
+    local _source = source
+    local user = VORPcore.getUser(_source)
+    if not user then return end
+
+    VORPcore.Player.Respawn(_source)
+end)
+
+local function UpdateBleed(source)
+    local _source = source
+    local user = VORPcore.getUser(_source)
+    if not user then return end
+    local Char = user.getUsedCharacter
+    local identifier = Char.identifier
+    local Charid = Char.charIdentifier
+
+    MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, Charid, identifier })
+    if Config.devMode then
+        print('Stopped Bleding for', GetPlayerName(_source))
+    end
+end
+
+AddEventHandler('vorp_core:Server:OnPlayerRevive', function(source)
+    if Config.StopBleedOnRevive then
+        UpdateBleed(source)
+    end
+end)
+
+AddEventHandler('vorp_core:Server:OnPlayerRespawn', function(source)
+    if Config.StopBleedOnRespawn then
+        UpdateBleed(source)
     end
 end)
