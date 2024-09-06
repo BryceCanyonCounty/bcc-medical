@@ -321,7 +321,7 @@ function ShowInputForItem(page, itemLabel, serverItemName)
             if Config.devMode then
                 print("Amount entered for " .. itemLabel .. ": " .. amount)
             end
-            TriggerServerEvent('bcc-medical:takeitem', serverItemName, amount)
+            TriggerServerEvent('bcc-medical:TakeItem', serverItemName, amount)
             CabinetMenu()
         else
             print("Invalid input. Please enter a numeric value.")
