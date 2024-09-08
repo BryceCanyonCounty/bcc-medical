@@ -200,14 +200,14 @@ function SpawnNPC()
         if Config.doctors.toHospital then
             DoScreenFadeOut(800)
             Wait(800)
-            TriggerServerEvent('bcc-medical:RespawnPlayer')
+            TriggerServerEvent('bcc-medical:PlayerRespawn')
             while IsScreenFadedOut do
                 Wait(50)
             end
         else
             DoScreenFadeOut(800)
             Wait(800)
-            TriggerServerEvent('bcc-medical:RevivePlayer')
+            TriggerServerEvent('bcc-medical:PlayerRevive')
             Wait(800)
             DoScreenFadeIn(800)
         end
