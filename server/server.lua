@@ -11,8 +11,8 @@ local function CheckPlayerJob(playerJob)
 end
 
 VORPcore.Callback.Register('bcc-medical:CheckJob', function(source, cb)
-    local _source = source
-    local user = VORPcore.getUser(_source)
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return cb(false) end
     local Character = user.getUsedCharacter
     local playerJob = Character.job
@@ -51,15 +51,15 @@ local function CheckTable(table, element)
 end
 
 RegisterNetEvent("bcc-medical:AlertJobs", function()
-    local _source = source
-    local user = VORPcore.getUser(_source)
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return end
     local docs = 0
     if Config.synsociety then
         if CheckPlayer(StaffTable, MedicJobs[1]) or CheckPlayer(StaffTable, MedicJobs[2]) then
-            VORPcore.NotifyRightTip(_source, _U('doctoractive'), 4000)
+            VORPcore.NotifyRightTip(src, _U('doctoractive'), 4000)
         else
-            TriggerClientEvent('bcc-medical:FindDoc', _source)
+            TriggerClientEvent('bcc-medical:FindDoc', src)
             return
         end
     else
@@ -72,17 +72,17 @@ RegisterNetEvent("bcc-medical:AlertJobs", function()
         end
     end
     if docs < 1 then
-        TriggerClientEvent('bcc-medical:FindDoc', _source)
+        TriggerClientEvent('bcc-medical:FindDoc', src)
     else
-        VORPcore.NotifyRightTip(_source, _U('doctoractive2'), 4000)
-        --VORPcore.NotifyRightTip(_source, _U('doctoractive'), 4000) -- Send /alert... needs to be added
+        VORPcore.NotifyRightTip(src, _U('doctoractive2'), 4000)
+        --VORPcore.NotifyRightTip(src, _U('doctoractive'), 4000) -- Send /alert... needs to be added
     end
 end)
 
 ---@param bleed integer
 RegisterServerEvent('bcc-medical:SetBleed', function(bleed)
-    local _source = source
-    local user = VORPcore.getUser(_source)
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return end
     local Character = user.getUsedCharacter
     local identifier = Character.identifier
@@ -93,60 +93,60 @@ end)
 
 
 RegisterServerEvent("bcc-medical:SendPlayers", function(source)
-    local _source = source
-    local user = VORPcore.getUser(_source)
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return end
     local Character = user.getUsedCharacter
     local job = Character.job -- player job
 
     if CheckTable(MedicJobs, job) then
-        StaffTable[#StaffTable + 1] = _source -- id
+        StaffTable[#StaffTable + 1] = src -- id
     end
 end)
 
 AddEventHandler('playerDropped', function()
-    local _source = source
+    local src = source
     for index, value in pairs(StaffTable) do
-        if value == _source then
+        if value == src then
             StaffTable[index] = nil
         end
     end
 end)
 
 RegisterServerEvent('bcc-medical:TakeItem', function(item, number)
-    local _source = source
-    local user = VORPcore.getUser(_source)
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return end
     local Character = user.getUsedCharacter
     local playername = Character.firstname .. ' ' .. Character.lastname
 
-    exports.vorp_inventory:addItem(_source, item, number)
-    VORPcore.NotifyRightTip(_source, _U('Received') .. number .. _U('Of') .. item, 4000)
+    exports.vorp_inventory:addItem(src, item, number)
+    VORPcore.NotifyRightTip(src, _U('Received') .. number .. _U('Of') .. item, 4000)
     VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook, playername .. " took " .. number .. ' ' .. item)
 end)
 
 VORPcore.Callback.Register('bcc-medical:RevivePlayer', function(source, cb)
-    local _source = source
-    local user = VORPcore.getUser(_source)
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return cb(false) end
     local Character = user.getUsedCharacter
     local money = Character.money
     local cost = Config.doctors.amount
 
     if not Config.gonegative and money < cost then
-        VORPcore.NotifyRightTip(_source, _U('notenough') .. cost, 4000)
+        VORPcore.NotifyRightTip(src, _U('notenough') .. cost, 4000)
         return cb(false)
     end
 
     Character.removeCurrency(0, cost) -- Remove money 1000 | 0 = money, 1 = gold, 2 = rol
-    VORPcore.NotifyRightTip(_source, _U('revived') .. cost, 4000)
+    VORPcore.NotifyRightTip(src, _U('revived') .. cost, 4000)
     cb(true)
 end)
 
 RegisterNetEvent('bcc-medical:ReviveClosestPlayer', function(reviveItem, closestPlayer)
     -- Player
-    local _source = source
-    local user = VORPcore.getUser(_source)
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return end
     local Character = user.getUsedCharacter
     local playerName = Character.firstname .. ' ' .. Character.lastname
@@ -155,23 +155,22 @@ RegisterNetEvent('bcc-medical:ReviveClosestPlayer', function(reviveItem, closest
     if not targetUser then return end
     local target = targetUser.getUsedCharacter
     local targetName = target.firstname .. ' ' .. target.lastname
-    local count = exports.vorp_inventory:getItemCount(_source, nil, reviveItem)
+    local count = exports.vorp_inventory:getItemCount(src, nil, reviveItem)
 
     if count > 0 then
-        exports.vorp_inventory:subItem(_source, reviveItem, 1)
-        --TriggerClientEvent('bcc-medical:Revive', closestPlayer)
-        TriggerEvent('bcc-medical:RevivePlayer', closestPlayer)
+        exports.vorp_inventory:subItem(src, reviveItem, 1)
+        VORPcore.Player.Revive(closestPlayer)
         if Config.usewebhook then
             VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook, _U('Player_Syringe') .. playerName .. _U('Used_Syringe') .. targetName)
         end
     else
-        VORPcore.NotifyRightTip(_source, _U('Missing') .. reviveItem, 4000)
+        VORPcore.NotifyRightTip(src, _U('Missing') .. reviveItem, 4000)
     end
 end)
 
 RegisterServerEvent('bcc-medical:StopBleed', function(mySelf, closestPlayer, perm)
-    local _source = source
-    local user = VORPcore.getUser(_source)
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return end
     local Char = user.getUsedCharacter
     local charIdentifier = Char.identifier
@@ -210,8 +209,8 @@ RegisterServerEvent('bcc-medical:StopBleed', function(mySelf, closestPlayer, per
 end)
 
 VORPcore.Callback.Register('bcc-medical:CheckBleed', function(source, cb)
-    local _source = source
-    local user = VORPcore.getUser(_source)
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return cb(false) end
     local character = user.getUsedCharacter
     local identifier = character.identifier
@@ -227,11 +226,11 @@ end)
 CreateThread(function ()
     for _, item in ipairs(Config.ReviveItems) do
         exports.vorp_inventory:registerUsableItem(item, function(data)
-            local _source = data.source
-            exports.vorp_inventory:closeInventory(_source)
-            TriggerClientEvent('bcc-medical:GetClosestPlayerRevive', _source, item)
-            exports.vorp_inventory:subItem(_source, item, 1)
-            VORPcore.NotifyRightTip(_source, _U('You_Used') .. item, 4000)
+            local src = data.source
+            exports.vorp_inventory:closeInventory(src)
+            TriggerClientEvent('bcc-medical:GetClosestPlayerRevive', src, item)
+            exports.vorp_inventory:subItem(src, item, 1)
+            VORPcore.NotifyRightTip(src, _U('You_Used') .. item, 4000)
         end)
     end
 end)
@@ -239,43 +238,43 @@ end)
 CreateThread(function ()
     for _, item in ipairs(Config.BandageItems) do
         exports.vorp_inventory:registerUsableItem(item, function(data)
-            local _source = data.source
-            exports.vorp_inventory:closeInventory(_source)
-            TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', _source, false)
-            exports.vorp_inventory:subItem(_source, item, 1)
-            VORPcore.NotifyRightTip(_source, _U('You_Used') .. item, 4000)
+            local src = data.source
+            exports.vorp_inventory:closeInventory(src)
+            TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', src, false)
+            exports.vorp_inventory:subItem(src, item, 1)
+            VORPcore.NotifyRightTip(src, _U('You_Used') .. item, 4000)
         end)
     end
 end)
 
 exports.vorp_inventory:registerUsableItem(Config.Stitches, function(data)
-    local _source = data.source
+    local src = data.source
     local stitches = Config.Stitches
-    exports.vorp_inventory:closeInventory(_source)
-    TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', _source, true)
-    exports.vorp_inventory:subItem(_source, stitches, 1)
-    VORPcore.NotifyRightTip(_source, _U('You_Used') .. stitches, 4000)
+    exports.vorp_inventory:closeInventory(src)
+    TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', src, true)
+    exports.vorp_inventory:subItem(src, stitches, 1)
+    VORPcore.NotifyRightTip(src, _U('You_Used') .. stitches, 4000)
 end)
 
-RegisterServerEvent('bcc-medical:RevivePlayer', function(source)
-    local _source = source
-    local user = VORPcore.getUser(_source)
+RegisterServerEvent('bcc-medical:PlayerRevive', function()
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return end
 
-    VORPcore.Player.Revive(_source)
+    VORPcore.Player.Revive(src)
 end)
 
-RegisterServerEvent('bcc-medical:RespawnPlayer', function()
-    local _source = source
-    local user = VORPcore.getUser(_source)
+RegisterServerEvent('bcc-medical:PlayerRespawn', function()
+    local src = source
+    local user = VORPcore.getUser(src)
     if not user then return end
 
-    VORPcore.Player.Respawn(_source)
+    VORPcore.Player.Respawn(src)
 end)
 
-local function UpdateBleed(source)
-    local _source = source
-    local user = VORPcore.getUser(_source)
+local function UpdateBleed(playerSource)
+    local src = playerSource
+    local user = VORPcore.getUser(src)
     if not user then return end
     local Char = user.getUsedCharacter
     local identifier = Char.identifier
@@ -283,18 +282,22 @@ local function UpdateBleed(source)
 
     MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, Charid, identifier })
     if Config.devMode then
-        print('Stopped Bleding for', GetPlayerName(_source))
+        print('Stopped Bleding for', GetPlayerName(src))
     end
 end
 
-AddEventHandler('vorp_core:Server:OnPlayerRevive', function(source)
+-- Per vorp docs these only require AddEventHandler
+-- RegisterNetEvent has been added as player received error 'not safe for net'
+RegisterNetEvent('vorp_core:Server:OnPlayerRevive')
+AddEventHandler('vorp_core:Server:OnPlayerRevive', function(playerSource)
     if Config.StopBleedOnRevive then
-        UpdateBleed(source)
+        UpdateBleed(playerSource)
     end
 end)
 
-AddEventHandler('vorp_core:Server:OnPlayerRespawn', function(source)
+RegisterNetEvent('vorp_core:Server:OnPlayerRespawn')
+AddEventHandler('vorp_core:Server:OnPlayerRespawn', function(playerSource)
     if Config.StopBleedOnRespawn then
-        UpdateBleed(source)
+        UpdateBleed(playerSource)
     end
 end)
