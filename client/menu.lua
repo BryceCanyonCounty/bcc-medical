@@ -1,348 +1,470 @@
-local HealthCheck = false
+local RefreshMenu = false
 
-function MedicMenu()
-    local health = GetEntityHealth(PlayerPedId())
-    local pulse = health / 4 + math.random(20, 30)
-    local hit, bone = GetPedLastDamageBone(PlayerPedId())
-    if DamageHash == nil then DamageHash = 'None' end
+function OpenPlayerMenu()
+    local playerPed = PlayerPedId()
+    local health = GetEntityHealth(playerPed)
+    local pulse = math.floor((health * 0.1) + (math.random(15, 20)))
+    local bool, bone = GetPedLastDamageBone(playerPed)
 
-    local MedicMenuPage = BCCMedicalCabinetMenu:RegisterPage('doctor:menu:page')
+    -- Check if the player is bleeding
+    local bleeding = 'No'
+    local isBleeding = PlayerBleedCheck()
+    if isBleeding then
+        bleeding = 'Yes'
+    end
 
-    MedicMenuPage:RegisterElement('header', {
+    local PlayerMenu = MedicalMenu:RegisterPage('player:menu:page')
+
+    PlayerMenu:RegisterElement('header', {
         value = _U('PlayerMenu'),
-        slot = "header",
+        slot = 'header',
+        style = {
+            ['color'] = '#999'
+        }
+    })
+
+    PlayerMenu:RegisterElement('subheader', {
+        value = _U('myStats'),
+        slot = 'header',
+        style = {
+            ['font-size'] = '0.94vw',
+            ['color'] = '#CC9900'
+        }
+    })
+
+    PlayerMenu:RegisterElement('line', {
+        slot = 'header',
         style = {}
     })
 
-    MedicMenuPage:RegisterElement('button', {
-        label = _U('Pulse') .. pulse,
+    -- Display my pulse
+    PlayerMenu:RegisterElement('button', {
+        label = _U('Pulse') .. tostring(pulse),
+        style = {
+            ['color'] = '#E0E0E0'
+        }
+    })
+
+    local damageBone = nil
+    damageBone = CheckPart(bone)
+    while not damageBone do
+        Wait(5)
+    end
+
+    local damageLabel = _U('lastInjury')
+    if bleeding == 'Yes' then
+        damageLabel = _U('Injury')
+    end
+
+    -- Display the injured part and wound type
+    PlayerMenu:RegisterElement('button', {
+        label = damageLabel .. damageBone,
+        style = {
+            ['color'] = '#E0E0E0'
+        },
+    })
+
+    local woundLabel = _U('lastWound')
+    if bleeding == 'Yes' then
+        woundLabel = _U('Wound')
+    end
+
+    PlayerMenu:RegisterElement('button', {
+        label = woundLabel .. DamageHashCheck(nil),
+        style = {
+            ['color'] = '#E0E0E0'
+        },
+    })
+
+    PlayerMenu:RegisterElement('button', {
+        label = _U('bleeding') .. bleeding,
+        style = {
+            ['color'] = '#E0E0E0'
+        },
+    })
+
+    PlayerMenu:RegisterElement('line', {
+        slot = 'footer',
         style = {}
     })
 
-    MedicMenuPage:RegisterElement('button', {
-        label = _U('InjuredPart') .. DamageBoneSelf,
-        style = {},
+    -- Refresh menu stats
+    PlayerMenu:RegisterElement('button', {
+        label = 'Refresh',
+        slot = 'footer',
+        style = {
+            ['color'] = '#E0E0E0'
+        }
     }, function()
-        if Config.devMode then
-            print("Injured part button clicked.")
-        end
-        if not HealthCheck then
-            HealthCheck = true
-            hit, bone = GetPedLastDamageBone(PlayerPedId())
+        if not RefreshMenu then
+            RefreshMenu = true
+            OpenPlayerMenu()
             if Config.devMode then
-                print("Checking part for player.")
+                print('Refresh button clicked. Refreshing menu.')
             end
-            CheckPartSelf(bone)  -- Directly call the function instead of triggering an event
         else
-            HealthCheck = false
+            RefreshMenu = false
         end
-        MedicMenu()  -- Refresh or re-open the MedicMenu
     end)
 
-    MedicMenuPage:RegisterElement('line', {
+    PlayerMenu:RegisterElement('line', {
         slot = 'footer',
         style = {}
     })
 
-    MedicMenuPage:RegisterElement('button', {
-        label = "Back",
-        slot = 'footer',
-        style = {}
-    })
-
-    MedicMenuPage:RegisterElement('bottomline', {
-        slot = 'footer',
-        style = {}
-    })
-
-    -- Open the initial doctor menu
+    -- Open the initial player menu
     if Config.devMode then
-        print("Opening MedicMenu page.")
+        print('Opening PlayerMenu page.')
     end
-    BCCMedicalCabinetMenu:Open({
-        startupPage = MedicMenuPage
+    MedicalMenu:Open({
+        startupPage = PlayerMenu
     })
 end
 
-function DoctorMenu()
-	local health = GetEntityHealth(PlayerPedId())
-	local pulse = health / 4 + math.random(20, 30)
+function OpenDoctorMenu()
     local closestPlayer, closestDistance = GetClosestPlayer()
     local closestPlayerPed = GetPlayerPed(closestPlayer)
-    local patientHealth = GetEntityHealth(closestPlayerPed)
-    local patientPulse = patientHealth / 4 + math.random(20, 30)
+    local health = GetEntityHealth(closestPlayerPed)
+    local pulse = math.floor((health * 0.1) + (math.random(15, 20)))
+    local bool, bone = GetPedLastDamageBone(closestPlayerPed)
 
-    local closestHit, closestBone = GetPedLastDamageBone(closestPlayerPed)
-    local hit, bone = GetPedLastDamageBone(PlayerPedId())
-    if DamageHash == nil then DamageHash = 'None' end
-
-    local DoctorMenuPage = BCCMedicalCabinetMenu:RegisterPage('doctor:menu:page')
-
-    DoctorMenuPage:RegisterElement('header', {
-        value = _U('DoctorMenu'),
-        slot = "header",
-        style = {}
-    })
-
-    if closestPlayer ~= -1 and closestDistance <= 3.0 then
-        if Config.devMode then
-            print("Found closest player within range. Checking part other.")
-        end
-        CheckPartOther(closestBone)
-        Wait(1000)
-        DoctorMenuPage:RegisterElement('button', {
-            label = _U('ClosestInjury') .. DamageBone,
-            style = {},
-        }, function()
-            if Config.devMode then
-                print("Closest injury button clicked.")
-            end
-            if closestPlayer ~= -1 and closestDistance <= 3.0 then
-                if not HealthCheck then
-                    HealthCheck = true
-                    hit, closestBone = GetPedLastDamageBone(closestPlayerPed)
-                    if Config.devMode then
-                        print("Checking part other for closest bone.")
-                    end
-                    CheckPartOther(closestBone) -- Directly call the function instead of triggering an event
-                else
-                    HealthCheck = false
-                end
-            end
-            DoctorMenu() -- Refresh or re-open the DoctorMenu
-        end)
-
-        DoctorMenuPage:RegisterElement('button', {
-            label = _U('ClosestInjuryDesc') .. DamageBone,
-            style = {},
-        })
-
-
-        DoctorMenuPage:RegisterElement('button', {
-            label = _U('ClosestWound') .. DamageHashCheck(),
-            style = {}
-        })
-
-        DoctorMenuPage:RegisterElement('button', {
-            label = _U('WoundDesc') .. DamageHashCheck(),
-            style = {}
-        })
-
-        DoctorMenuPage:RegisterElement('textdisplay', {
-            label = _U('PatientPulse') .. patientPulse,
-            style = {}
-        })
+    -- Check if the patient is bleeding
+    local bleeding = 'No'
+    local isBleeding = PatientBleedCheck(GetPlayerServerId(closestPlayer))
+    if isBleeding then
+        bleeding = 'Yes'
     end
 
-    DoctorMenuPage:RegisterElement('button', {
-        label = _U('ClosestWound') .. DamageHashCheck(),
-        style = {},
+    local DoctorMenu = MedicalMenu:RegisterPage('doctor:menu:page')
+
+    DoctorMenu:RegisterElement('header', {
+        value = _U('DoctorMenu'),
+        slot = 'header',
+        style = {
+            ['color'] = '#999'
+        }
+    })
+
+    DoctorMenu:RegisterElement('subheader', {
+        value = _U('patientStats'),
+        slot = 'header',
+        style = {
+            ['font-size'] = '0.9vw',
+            ['color'] = '#CC9900'
+        }
+    })
+
+    DoctorMenu:RegisterElement('line', {
+        slot = 'header',
+        style = {}
+    })
+
+    -- Display patient pulse
+    DoctorMenu:RegisterElement('button', {
+        label = _U('Pulse') .. tostring(pulse),
+        style = {
+            ['color'] = '#E0E0E0'
+        }
+    })
+
+    local damageBone = nil
+    damageBone = CheckPart(bone)
+    while not damageBone do
+        Wait(5)
+    end
+
+    local damageLabel = _U('lastInjury')
+    if bleeding == 'Yes' then
+        damageLabel = _U('Injury')
+    end
+
+    -- Display patients injured part and wound type
+    DoctorMenu:RegisterElement('button', {
+        label = damageLabel .. damageBone,
+        style = {
+            ['color'] = '#E0E0E0'
+        },
+    })
+
+    local damageHash = Entity(closestPlayerPed).state.damageHash
+    local damageType = nil
+    damageType = DamageHashCheck(damageHash)
+    while not damageType do
+        Wait(5)
+    end
+
+    local woundLabel = _U('lastWound')
+    if bleeding == 'Yes' then
+        woundLabel = _U('Wound')
+    end
+
+    DoctorMenu:RegisterElement('button', {
+        label = woundLabel .. damageType,
+        style = {
+            ['color'] = '#E0E0E0'
+        },
+    })
+
+    DoctorMenu:RegisterElement('button', {
+        label = _U('bleeding') .. bleeding,
+        style = {
+            ['color'] = '#E0E0E0'
+        },
+    })
+
+    DoctorMenu:RegisterElement('line', {
+        slot = 'footer',
+        style = {}
+    })
+
+    -- Refresh menu stats
+    DoctorMenu:RegisterElement('button', {
+        label = 'Refresh',
+        slot = 'footer',
+        style = {
+            ['color'] = '#E0E0E0'
+        }
     }, function()
-        if Config.devMode then
-            print("Injured part button clicked.")
-        end
-        if closestPlayer ~= -1 and closestDistance <= 3.0 then
-            if not HealthCheck then
-                HealthCheck = true
-                hit, closestBone = GetPedLastDamageBone(closestPlayerPed)
-                if Config.devMode then
-                    print("Checking part other for closest bone.")
-                end
-                CheckPartOther(closestBone) -- Directly call the function instead of triggering an event
-            else
-                HealthCheck = false
+        if not RefreshMenu then
+            RefreshMenu = true
+            OpenDoctorMenu()
+            if Config.devMode then
+                print('Refresh button clicked. Refreshing menu.')
             end
+        else
+            RefreshMenu = false
         end
-        DoctorMenu() -- Refresh or re-open the DoctorMenu
     end)
 
-    -- Add specific injury details
-    DoctorMenuPage:RegisterElement('button', {
-        label = _U('ClosestInjury') .. ": " .. (bone or _U('None')),
-        style = {}
-    })
-
-    DoctorMenuPage:RegisterElement('line', {
-        slot = 'footer',
-        style = {}
-    })
-
-    DoctorMenuPage:RegisterElement('button', {
-        label = 'Back',
-        slot = 'footer',
-        style = {}
-    }, function()
-        if Config.devMode then
-            print("Back button clicked. Refreshing menu.")
-        end
-        DoctorMenu() -- Navigate back or refresh the menu
-    end)
-
-    DoctorMenuPage:RegisterElement('bottomline', {
+    DoctorMenu:RegisterElement('line', {
         slot = 'footer',
         style = {}
     })
 
     -- Open the initial doctor menu
     if Config.devMode then
-        print("Opening DoctorMenu page.")
+        print('Opening DoctorMenu page.')
     end
-    BCCMedicalCabinetMenu:Open({
-        startupPage = DoctorMenuPage
+    MedicalMenu:Open({
+        startupPage = DoctorMenu
     })
 end
 
-function CabinetMenu()
-    BCCMedicalCabinetMenu:Close() -- Ensure no other menus are open
+function OpenCabinetMenu(menuCfg)
     if Config.devMode then
-        print("Closed existing menu.")
+        print('Closed existing menu.')
     end
 
     -- Initialize the cabinet choice menu page
-    local cabinetChoiceMenuPage = BCCMedicalCabinetMenu:RegisterPage('cabinet_choice_page')
+    local CabinetMenu = MedicalMenu:RegisterPage('cabinet_choice_page')
 
-    cabinetChoiceMenuPage:RegisterElement('header', {
-        value = _U('CabinetMenu'),
-        slot = "header",
-        style = {}
+    CabinetMenu:RegisterElement('header', {
+        value = menuCfg.header,
+        slot = 'header',
+        style = {
+            ['color'] = '#999'
+        }
     })
 
-    cabinetChoiceMenuPage:RegisterElement('line', {
-        slot = "header",
+    CabinetMenu:RegisterElement('subheader', {
+        value = menuCfg.subHeader,
+        slot = 'header',
+        style = {
+            ['font-size'] = '0.9vw',
+            ['color'] = '#CC9900'
+        }
+    })
+
+    CabinetMenu:RegisterElement('line', {
+        slot = 'header',
         style = {}
     })
 
     -- Button for initiating the stitch input
-    cabinetChoiceMenuPage:RegisterElement('button', {
-        label = _U('Stitch')
-    }, function()
-        if Config.devMode then
-            print("Stitch button clicked.")
+    if Config.cabinet.stitches then
+        for _, itemCfg in pairs(Config.Stitches) do
+            CabinetMenu:RegisterElement('button', {
+                label = itemCfg.label:sub(1, 1):upper() .. itemCfg.label:sub(2),
+                style = {
+                    ['color'] = '#E0E0E0'
+                }
+            }, function()
+                if Config.devMode then
+                    print(itemCfg.label .. ' button clicked.')
+                end
+                ShowInputForItem(menuCfg, itemCfg.label, itemCfg.item)
+            end)
         end
-        ShowInputForItem(cabinetChoiceMenuPage, "Stitch", "NeedleandThread")
-    end)
+    end
 
     -- Register buttons for Bandage Items
-    for _, item in ipairs(Config.BandageItems) do
-        cabinetChoiceMenuPage:RegisterElement('button', {
-            label = item:sub(1, 1):upper() .. item:sub(2),
-            style = {}
-        }, function()
-            if Config.devMode then
-                print(item .. " button clicked.")
-            end
-            ShowInputForItem(cabinetChoiceMenuPage, item, item)
-        end)
+    if Config.cabinet.bandageItems then
+        for _, itemCfg in pairs(Config.BandageItems) do
+            CabinetMenu:RegisterElement('button', {
+                label = itemCfg.label:sub(1, 1):upper() .. itemCfg.label:sub(2),
+                style = {
+                    ['color'] = '#E0E0E0'
+                }
+            }, function()
+                if Config.devMode then
+                    print(itemCfg.label .. ' button clicked.')
+                end
+                ShowInputForItem(menuCfg, itemCfg.label, itemCfg.item)
+            end)
+        end
     end
 
     -- Register buttons for Revive Items
-    for _, item in ipairs(Config.ReviveItems) do
-        cabinetChoiceMenuPage:RegisterElement('button', {
-            label = item:sub(1, 1):upper() .. item:sub(2),
-            style = {}
-        }, function()
-            if Config.devMode then
-                print(item .. " button clicked.")
-            end
-            ShowInputForItem(cabinetChoiceMenuPage, item, item)
-        end)
+    if Config.cabinet.reviveItems then
+        for _, itemCfg in pairs(Config.ReviveItems) do
+            CabinetMenu:RegisterElement('button', {
+                label = itemCfg.label:sub(1, 1):upper() .. itemCfg.label:sub(2),
+                style = {
+                    ['color'] = '#E0E0E0'
+                }
+            }, function()
+                if Config.devMode then
+                    print(itemCfg.label .. ' button clicked.')
+                end
+                ShowInputForItem(menuCfg, itemCfg.label, itemCfg.item)
+            end)
+        end
     end
 
     -- Button for Doctor Bag
-    cabinetChoiceMenuPage:RegisterElement('button', {
-        label = "Doctor Bag"
-    }, function()
-        if Config.devMode then
-            print("Doctor Bag button clicked.")
-        end
-        TriggerServerEvent('bcc-medical:TakeItem', "Doctor_Bag", 1)
-    end)
+    if Config.PropCrafting then
+        CabinetMenu:RegisterElement('button', {
+            label = _U('doctorBag'),
+            style = {
+                ['color'] = '#E0E0E0'
+            }
+        }, function()
+            if Config.devMode then
+                print('Doctor Bag button clicked.')
+            end
+            TriggerServerEvent('bcc-medical:TakeItem', _U('doctorBag'), Config.doctorBag, 1)
+        end)
+    end
 
-    cabinetChoiceMenuPage:RegisterElement('line', {
-        slot = "footer",
+    CabinetMenu:RegisterElement('line', {
+        slot = 'footer',
         style = {}
     })
 
-    -- Register a back or close button on the menu
-    cabinetChoiceMenuPage:RegisterElement('button', {
-        label = "Close",
-        slot = "footer",
-        style = {}
+    -- Register close button on the menu
+    CabinetMenu:RegisterElement('button', {
+        label = _U('close'),
+        slot = 'footer',
+        style = {
+            ['color'] = '#E0E0E0'
+        }
     }, function()
         if Config.devMode then
-            print("Close button clicked. Closing menu.")
+            print('Close button clicked. Closing menu.')
         end
-        BCCMedicalCabinetMenu:Close()
+        MedicalMenu:Close()
     end)
 
-    cabinetChoiceMenuPage:RegisterElement('bottomline', {
-        slot = "footer",
+    CabinetMenu:RegisterElement('line', {
+        slot = 'footer',
         style = {}
     })
 
     -- Open the cabinet choice menu
     if Config.devMode then
-        print("Opening cabinet choice menu.")
+        print('Opening cabinet choice menu.')
     end
-    BCCMedicalCabinetMenu:Open({
-        startupPage = cabinetChoiceMenuPage
+    MedicalMenu:Open({
+        startupPage = CabinetMenu
     })
 end
 
-function ShowInputForItem(page, itemLabel, serverItemName)
-    local inputPage = BCCMedicalCabinetMenu:RegisterPage('entry:quantity')
-
+function ShowInputForItem(menuCfg, itemLabel, serverItemName)
     local currentInputValue = nil -- To hold the input value as a string initially
 
+    local inputPage = MedicalMenu:RegisterPage('entry:quantity')
+
     inputPage:RegisterElement('header', {
+        value = menuCfg.header,
+        slot = 'header',
+        style = {
+            ['color'] = '#999'
+        }
+    })
+
+    inputPage:RegisterElement('subheader', {
         value = itemLabel,
-        slot = "header",
+        slot = 'header',
+        style = {
+            ['font-size'] = '0.9vw',
+            ['color'] = '#CC9900'
+        }
+    })
+
+    inputPage:RegisterElement('line', {
+        slot = 'header',
         style = {}
     })
 
     inputPage:RegisterElement('input', {
-        label = "Enter Amount for " .. itemLabel,
-        placeholder = "Enter amount...",
-        style = {}
+        label = _U('quantity'),
+        placeholder = _U('placeholder'),
+        style = {
+            ['color'] = '#E0E0E0'
+        }
     }, function(data)
         currentInputValue = data.value -- Direct assignment as string
         if Config.devMode then
-            print("Input received: " .. currentInputValue)
+            print('Input received: ' .. currentInputValue)
         end
     end)
 
-    inputPage:RegisterElement('button', {
-        label = "Submit",
-        slot = "footer",
+    inputPage:RegisterElement('line', {
+        slot = 'footer',
         style = {}
+    })
+
+    inputPage:RegisterElement('button', {
+        label = _U('submit'),
+        slot = 'footer',
+        style = {
+            ['color'] = '#E0E0E0'
+        }
     }, function()
         local amount = tonumber(currentInputValue) -- Proper conversion to number
         if amount and amount > 0 then
             if Config.devMode then
-                print("Amount entered for " .. itemLabel .. ": " .. amount)
+                print('Amount entered for ' .. itemLabel .. ': ' .. amount)
             end
-            TriggerServerEvent('bcc-medical:TakeItem', serverItemName, amount)
-            CabinetMenu()
+            TriggerServerEvent('bcc-medical:TakeItem', itemLabel, serverItemName, amount)
+            OpenCabinetMenu(menuCfg)
         else
-            print("Invalid input. Please enter a numeric value.")
+            print('Invalid input. Please enter a numeric value.')
         end
     end)
 
     inputPage:RegisterElement('button', {
-        label = "Back",
-        slot = "footer",
-        style = {}
+        label = _U('back'),
+        slot = 'footer',
+        style = {
+            ['color'] = '#E0E0E0'
+        }
     }, function()
         if Config.devMode then
-            print("Back button clicked. Returning to cabinet menu.")
+            print('Back button clicked. Returning to cabinet menu.')
         end
-        CabinetMenu() -- Navigate back
+        OpenCabinetMenu(menuCfg) -- Navigate back
     end)
 
+    inputPage:RegisterElement('line', {
+        slot = 'footer',
+        style = {}
+    })
+
     if Config.devMode then
-        print("Opening input page for item: " .. itemLabel)
+        print('Opening input page for item: ' .. itemLabel)
     end
-    BCCMedicalCabinetMenu:Open({
+    MedicalMenu:Open({
         startupPage = inputPage
     })
 end

@@ -6,8 +6,8 @@ combining AIMedic and Medical Script for VORP.
 
 This script allows the choosing of NPC model, command, price, and multijob restriction for the
 spawning of an AI Medic to pick you up. This has been improved upon from the original legacy_aimedic and legacy_medic. 
-It now includes an injury checking system. As a regular player you can check your last injury and the closest persons injury.
-As a doctor you can check all of these and the patients pulse too!
+It now includes an injury checking system. As a regular player you can check your pulse and last injury.
+As a doctor you can check all of these and the patients stats too!
 
 Also included, an injury and bleeding system set in the Config file. Stitches item will stop bleeding forever while bandage items stop the bleeding temporarily and saves to the database.
 You will bleed from knife and gunshot injuries.

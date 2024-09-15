@@ -33,7 +33,7 @@ end)
 ---@return boolean
 local CheckPlayer = function(table, job)
     for _, jobholder in pairs(table) do
-        local onduty = exports["syn_society"]:IsPlayerOnDuty(jobholder, job)
+        local onduty = exports['syn_society']:IsPlayerOnDuty(jobholder, job)
         print(onduty)
         return onduty
     end
@@ -50,7 +50,7 @@ local function CheckTable(table, element)
     return false
 end
 
-RegisterNetEvent("bcc-medical:AlertJobs", function()
+RegisterNetEvent('bcc-medical:AlertJobs', function()
     local src = source
     local user = VORPcore.getUser(src)
     if not user then return end
@@ -92,7 +92,7 @@ RegisterServerEvent('bcc-medical:SetBleed', function(bleed)
 end)
 
 
-RegisterServerEvent("bcc-medical:SendPlayers", function(source)
+RegisterServerEvent('bcc-medical:SendPlayers', function()
     local src = source
     local user = VORPcore.getUser(src)
     if not user then return end
@@ -113,16 +113,21 @@ AddEventHandler('playerDropped', function()
     end
 end)
 
-RegisterServerEvent('bcc-medical:TakeItem', function(item, number)
+RegisterServerEvent('bcc-medical:TakeItem', function(label, item, quantity)
     local src = source
     local user = VORPcore.getUser(src)
     if not user then return end
     local Character = user.getUsedCharacter
     local playername = Character.firstname .. ' ' .. Character.lastname
 
-    exports.vorp_inventory:addItem(src, item, number)
-    VORPcore.NotifyRightTip(src, _U('Received') .. number .. _U('Of') .. item, 4000)
-    VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook, playername .. " took " .. number .. ' ' .. item)
+    local canCarry = exports.vorp_inventory:canCarryItem(src, item, quantity)
+    if not canCarry then
+        VORPcore.NotifyRightTip(src, _U('not_enough_space'), 4000)
+        return
+    end
+    exports.vorp_inventory:addItem(src, item, quantity)
+    VORPcore.NotifyRightTip(src, _U('Received') .. tostring(quantity) .. ' ' .. label, 4000)
+    VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook, playername .. ' took ' .. quantity .. ' ' .. label)
 end)
 
 VORPcore.Callback.Register('bcc-medical:RevivePlayer', function(source, cb)
@@ -168,44 +173,36 @@ RegisterNetEvent('bcc-medical:ReviveClosestPlayer', function(reviveItem, closest
     end
 end)
 
-RegisterServerEvent('bcc-medical:StopBleed', function(mySelf, closestPlayer, perm)
+RegisterServerEvent('bcc-medical:StopBleed', function(mySelf, closestPlayer, item, perm)
     local src = source
     local user = VORPcore.getUser(src)
     if not user then return end
-    local Char = user.getUsedCharacter
-    local charIdentifier = Char.identifier
-    local Charid = Char.charIdentifier
+    local character = user.getUsedCharacter
 
-    local targetIdentifier
-    local targetid
-    if closestPlayer then
+    local count = exports.vorp_inventory:getItemCount(src, nil, item)
+    if count > 0 then
+        exports.vorp_inventory:subItem(src, item, 1)
+    end
+
+    if not mySelf then
         local targetUser = VORPcore.getUser(closestPlayer)
         if not targetUser then return end
-        local target = targetUser.getUsedCharacter
-        targetIdentifier = target.identifier
-        targetid = target.charIdentifier
+        character = targetUser.getUsedCharacter
     end
 
-    local id
-    local identifier
-    if mySelf then
-        id = Charid
-        identifier = charIdentifier
-    else
-        id = targetid
-        identifier = targetIdentifier
-    end
+    local identifier = character.identifier
+    local charId = character.charIdentifier
 
-    if not perm then
-        local result = MySQL.query.await('SELECT `bleed` FROM `characters` WHERE `charidentifier` = ? AND `identifier` = ?', { id, identifier })
-        if result and result[1].bleed == 1 then
-            MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, id, identifier })
-            Wait(60000 * 60 * 6) -- 6 hours / Find a better way to do this
-            MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 1, id, identifier })
-        end
-    else
-        MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, id, identifier })
-    end
+    -- if not perm then
+    --     local result = MySQL.query.await('SELECT `bleed` FROM `characters` WHERE `charidentifier` = ? AND `identifier` = ?', { charId, identifier })
+    --     if result and result[1].bleed == 1 then
+    --         MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, charId, identifier })
+    --         Wait(60000 * 60 * 6) -- 6 hours / Find a better way to do this
+    --         MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 1, charId, identifier })
+    --     end
+    -- else
+    MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, charId, identifier })
+    --end
 end)
 
 VORPcore.Callback.Register('bcc-medical:CheckBleed', function(source, cb)
@@ -223,37 +220,53 @@ VORPcore.Callback.Register('bcc-medical:CheckBleed', function(source, cb)
     cb(result[1].bleed)
 end)
 
+VORPcore.Callback.Register('bcc-medical:CheckPatientBleed', function(source, cb, patientSrc)
+    local src = source
+    local user = VORPcore.getUser(src)
+    if not user then return cb(false) end
+    -- Patient Data
+    local patientUser = VORPcore.getUser(patientSrc)
+    if not patientUser then return cb(false) end
+    local character = patientUser.getUsedCharacter
+    local identifier = character.identifier
+    local charid = character.charIdentifier
+
+    local result = MySQL.query.await('SELECT `bleed` FROM `characters` WHERE `charidentifier` = ? AND `identifier` = ?', { charid, identifier })
+
+    if not result or not result[1] then return cb(false) end
+
+    cb(result[1].bleed)
+end)
+
 CreateThread(function ()
-    for _, item in ipairs(Config.ReviveItems) do
-        exports.vorp_inventory:registerUsableItem(item, function(data)
+    for _, itemCfg in pairs(Config.ReviveItems) do
+        exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
             local src = data.source
             exports.vorp_inventory:closeInventory(src)
-            TriggerClientEvent('bcc-medical:GetClosestPlayerRevive', src, item)
-            exports.vorp_inventory:subItem(src, item, 1)
-            VORPcore.NotifyRightTip(src, _U('You_Used') .. item, 4000)
+            TriggerClientEvent('bcc-medical:GetClosestPlayerRevive', src, itemCfg.item)
+            VORPcore.NotifyRightTip(src, _U('You_Used') .. itemCfg.label, 4000)
         end)
     end
 end)
 
 CreateThread(function ()
-    for _, item in ipairs(Config.BandageItems) do
-        exports.vorp_inventory:registerUsableItem(item, function(data)
+    for _, itemCfg in pairs(Config.BandageItems) do
+        exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
             local src = data.source
             exports.vorp_inventory:closeInventory(src)
-            TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', src, false)
-            exports.vorp_inventory:subItem(src, item, 1)
-            VORPcore.NotifyRightTip(src, _U('You_Used') .. item, 4000)
+            TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', src, itemCfg.item, itemCfg.label, false)
         end)
     end
 end)
 
-exports.vorp_inventory:registerUsableItem(Config.Stitches, function(data)
-    local src = data.source
-    local stitches = Config.Stitches
-    exports.vorp_inventory:closeInventory(src)
-    TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', src, true)
-    exports.vorp_inventory:subItem(src, stitches, 1)
-    VORPcore.NotifyRightTip(src, _U('You_Used') .. stitches, 4000)
+CreateThread(function ()
+    for _, itemCfg in pairs(Config.Stitches) do
+        exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
+            local src = data.source
+            exports.vorp_inventory:closeInventory(src)
+            TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', src, itemCfg.item, itemCfg.label, true)
+        end)
+    end
 end)
 
 RegisterServerEvent('bcc-medical:PlayerRevive', function()
