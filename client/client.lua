@@ -1,22 +1,11 @@
-local PromptGroup = GetRandomIntInRange(0, 0xffffff)
-local UsePrompt
+local OfficeGroup = GetRandomIntInRange(0, 0xffffff)
+local CabinetPrompt
 local HasJob = false
 local IsCalled = false
 local CreatedPed = 0
 DamageBone = _U('None')
 DamageBoneSelf = _U('None')
 DamageHash = nil
-
-local function SetupUsePrompt()
-	UsePrompt = PromptRegisterBegin()
-	PromptSetControlAction(UsePrompt, Config.keys.usePrompt)
-	PromptSetText(UsePrompt, CreateVarString(10, 'LITERAL_STRING', _U('use')))
-	PromptSetEnabled(UsePrompt, true)
-	PromptSetVisible(UsePrompt, true)
-	PromptSetStandardMode(UsePrompt, true)
-	PromptSetGroup(UsePrompt, PromptGroup)
-	PromptRegisterEnd(UsePrompt)
-end
 
 local function CheckPlayerJob()
     local result = VORPcore.Callback.TriggerAwait('bcc-medical:CheckJob')
@@ -29,7 +18,7 @@ end
 CreateThread(function()
 	while true do
 		Wait(0)
-		if Citizen.InvokeNative(0xDCF06D0CDFF68424, PlayerPedId(), Guns[tostring(DamageHash)], 0) then -- HasEntityBeenDamagedByWeapon
+		if Citizen.InvokeNative(0xDCF06D0CDFF68424, PlayerPedId(), Guns[DamageHash], 0) then -- HasEntityBeenDamagedByWeapon
 			TriggerEvent('bcc-medical:ApplyBleed')
 		end
 		local size = GetNumberOfEvents(0) -- get number of events for EVENT GROUP 0 (SCRIPT_EVENT_QUEUE_AI). Check table below.
@@ -50,13 +39,14 @@ CreateThread(function()
                     eventDataStruct:SetInt32(56, 0) -- (float) Entity Coord y
                     eventDataStruct:SetInt32(64, 0) -- (float) Entity Coord z
 
-					local is_data_exists = Citizen.InvokeNative(0x57EC5FA4D4D6AFCA, 0, i, eventDataStruct:Buffer(), eventDataSize)          -- GET_EVENT_DATA
-					local Player = eventDataStruct:GetInt32(0)
-					if is_data_exists and Player == PlayerPedId() then
+					local is_data_exists = Citizen.InvokeNative(0x57EC5FA4D4D6AFCA, 0, i, eventDataStruct:Buffer(), eventDataSize) -- GetEventData
+					local playerPed = eventDataStruct:GetInt32(0)
+					if is_data_exists and playerPed == PlayerPedId() then
 						DamageHash = eventDataStruct:GetInt32(16)
 						DamageAmount = eventDataStruct:GetFloat32(32)
+                        Entity(playerPed).state:set('damageHash', DamageHash, true)
 
-						if ((Guns[tostring(DamageHash)]) and (DamageAmount > 2.0)) or ((Knives[tostring(DamageHash)]) and (DamageAmount > 2.0)) then
+						if ((Guns[DamageHash]) and (DamageAmount > 2.0)) or ((Knives[DamageHash]) and (DamageAmount > 2.0)) then
 							TriggerEvent('bcc-medical:ApplyBleed')
 						end
 					end
@@ -77,60 +67,104 @@ RegisterNetEvent('bcc-medical:ApplyBleed', function()
 	end
 end)
 
+local function StartPrompts()
+	CabinetPrompt = PromptRegisterBegin()
+	PromptSetControlAction(CabinetPrompt, Config.keys.usePrompt)
+	PromptSetText(CabinetPrompt, CreateVarString(10, 'LITERAL_STRING', _U('Open_Cabinet')))
+	PromptSetEnabled(CabinetPrompt, true)
+	PromptSetVisible(CabinetPrompt, true)
+	PromptSetStandardMode(CabinetPrompt, true)
+	PromptSetGroup(CabinetPrompt, OfficeGroup)
+	PromptRegisterEnd(CabinetPrompt)
+end
+
+local function ManageOfficeBlip(site, closed)
+    local siteCfg = Offices[site]
+
+    if closed and not siteCfg.blip.showClosed then
+        if Offices[site].Blip then
+            RemoveBlip(Offices[site].Blip)
+            Offices[site].Blip = nil
+        end
+        return
+    end
+
+    if not Offices[site].Blip then
+        siteCfg.Blip = Citizen.InvokeNative(0x554d9d53f696d002, 1664425300, siteCfg.office.location.x, siteCfg.office.location.y, siteCfg.office.location.z) -- BlipAddForCoords
+        SetBlipSprite(siteCfg.Blip, siteCfg.blip.sprite, true)
+        Citizen.InvokeNative(0x9CB1A1623062F402, siteCfg.Blip, siteCfg.blip.name) -- SetBlipName
+    end
+
+    local color = siteCfg.blip.color.open
+    if closed then color = siteCfg.blip.color.closed end
+    Citizen.InvokeNative(0x662D364ABF16DE2F, Offices[site].Blip, joaat(Config.BlipColors[color])) -- BlipAddModifier
+end
+
 CreateThread(function()
-	SetupUsePrompt()
+	StartPrompts()
 	while true do
 		local playerPed = PlayerPedId()
-		local playerCoords = GetEntityCoords(PlayerPedId(), true)
+		local playerCoords = GetEntityCoords(playerPed)
         local sleep = 1000
+        local hour = GetClockHours()
 
         if IsEntityDead(playerPed) then goto END end
 
-		for _, officeCfg in pairs(Offices) do
-            local distance = #(playerCoords - officeCfg.coords)
-			if distance <= 1.5 then
-                sleep = 0
-				PromptSetActiveGroupThisFrame(PromptGroup, CreateVarString(10, 'LITERAL_STRING', _U('Open_Cabinet')))
-				if Citizen.InvokeNative(0xC92AC953F0A982AE, UsePrompt) then -- PromptHasStandardModeCompleted
-					CheckPlayerJob()
-                    if HasJob then
-                        CabinetMenu()
-                    else
-                        VORPcore.NotifyRightTip(_U('you_do_not_have_job'), 4000)
+		for site, siteCfg in pairs(Offices) do
+            local distance = #(playerCoords - siteCfg.office.location)
+            -- Office Closed
+            if (siteCfg.office.hours.active and hour >= siteCfg.office.hours.close) or (siteCfg.office.hours.active and hour < siteCfg.office.hours.open) then
+                if siteCfg.blip.show then
+                    ManageOfficeBlip(site, true)
+                end
+                if distance <= siteCfg.office.distance then
+                    sleep = 0
+                    PromptSetActiveGroupThisFrame(OfficeGroup, CreateVarString(10, 'LITERAL_STRING', siteCfg.office.prompt .. _U('hours') ..
+                    siteCfg.office.hours.open .. _U('to') .. siteCfg.office.hours.close .. _U('hundred')))
+                    PromptSetEnabled(CabinetPrompt, false)
+                end
+            -- Office Open
+            else
+                if siteCfg.blip.show then
+                    ManageOfficeBlip(site, false)
+                end
+                if distance <= siteCfg.office.distance then
+                    sleep = 0
+                    PromptSetActiveGroupThisFrame(OfficeGroup, CreateVarString(10, 'LITERAL_STRING', siteCfg.office.prompt))
+                    PromptSetEnabled(CabinetPrompt, true)
+                    if Citizen.InvokeNative(0xC92AC953F0A982AE, CabinetPrompt) then -- PromptHasStandardModeCompleted
+                        CheckPlayerJob()
+                        if HasJob then
+                            OpenCabinetMenu(siteCfg.menu)
+                        else
+                            VORPcore.NotifyRightTip(_U('you_do_not_have_job'), 4000)
+                        end
                     end
-				end
-			end
+                end
+            end
 		end
         ::END::
         Wait(sleep)
 	end
 end)
 
-CreateThread(function()
-	for office, officeCfg in pairs(Offices) do
-		officeCfg.Blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, officeCfg.coords.x, officeCfg.coords.y, officeCfg.coords.z) -- BlipAddForCoords
-		SetBlipSprite(officeCfg.Blip, officeCfg.blip.sprite, true)
-		Citizen.InvokeNative(0x9CB1A1623062F402, officeCfg.Blip, officeCfg.blip.name) -- SetBlipName
-        Citizen.InvokeNative(0x662D364ABF16DE2F, Offices[office].Blip, joaat(Config.BlipColors[officeCfg.blip.color])) -- BlipAddModifier
-	end
-end)
-
-local function LoadAnimDict(dict)
+local function LoadAnim(dict)
 	RequestAnimDict(dict)
 	while not HasAnimDictLoaded(dict) do
-		Citizen.Wait(500)
+		Wait(10)
 	end
 end
 
-local function RevivePlayer(reviveitem, playerPed)
-	local closestPlayerPed = GetPlayerPed(playerPed)
+local function RevivePlayer(reviveitem, closestPlayer)
+    local playerPed = PlayerPedId()
+	local closestPlayerPed = GetPlayerPed(closestPlayer)
 	if IsPedDeadOrDying(closestPlayerPed, true) then
 		local dict = 'mech_revive@unapproved'
-		LoadAnimDict(dict)
-		TaskPlayAnim(PlayerPedId(), dict, 'revive', 1.0, 8.0, 2000, 31, 0, false, false, false)
+		LoadAnim(dict)
+		TaskPlayAnim(playerPed, dict, 'revive', 1.0, 1.0, 2000, 31, 1.0, false, false, false)
 		Wait(2000)
-		ClearPedTasks(PlayerPedId())
-		TriggerServerEvent('bcc-medical:ReviveClosestPlayer', reviveitem, GetPlayerServerId(playerPed))
+		ClearPedTasks(playerPed)
+		TriggerServerEvent('bcc-medical:ReviveClosestPlayer', reviveitem, GetPlayerServerId(closestPlayer))
 	else
 		VORPcore.NotifyRightTip(_U('player_not_unconscious'), 4000)
 	end
@@ -190,7 +224,7 @@ function SpawnNPC()
 	Citizen.InvokeNative(0x283978A15512B2FE, CreatedPed, true) -- SetRandomOutfitVariation
 
 	FreezeEntityPosition(CreatedPed, false)
-	Citizen.InvokeNative(0x923583741DC87BCE, CreatedPed, "default") -- SetPedDesiredLocoForModel
+	Citizen.InvokeNative(0x923583741DC87BCE, CreatedPed, 'default') -- SetPedDesiredLocoForModel
 	TaskGoToEntity(CreatedPed, PlayerPedId(), -1, 2.0, 5.0, 1073741824, 1)
 	Wait(7000)
 	DeleteEntity(CreatedPed)
@@ -244,6 +278,7 @@ end
 
 RegisterNetEvent('bcc-medical:GetClosestPlayerRevive', function(reviveItem)
 	local closestPlayer, closestDistance = GetClosestPlayer()
+
 	if closestPlayer ~= -1 and closestDistance <= 1.5 then
 		RevivePlayer(reviveItem, closestPlayer)
 	else
@@ -251,25 +286,43 @@ RegisterNetEvent('bcc-medical:GetClosestPlayerRevive', function(reviveItem)
 	end
 end)
 
-RegisterNetEvent('bcc-medical:GetClosestPlayerHeal', function(perm)
+RegisterNetEvent('bcc-medical:GetClosestPlayerHeal', function(item, itemLabel, perm)
 	local closestPlayer, closestDistance = GetClosestPlayer()
 
 	if closestPlayer ~= -1 and closestDistance <= 1.5 then
-		TriggerServerEvent('bcc-medical:StopBleed', false, GetPlayerServerId(closestPlayer), perm)
+        local closestPlayerSrc = GetPlayerServerId(closestPlayer)
+        local isBleeding = PatientBleedCheck(closestPlayerSrc)
+
+        if isBleeding then
+            TriggerServerEvent('bcc-medical:StopBleed', false, closestPlayerSrc, item, perm)
+            VORPcore.NotifyRightTip(_U('You_Used') .. itemLabel .. _U('onPatient'), 4000)
+        else
+            VORPcore.NotifyRightTip(_U('patientNotBleeding'), 4000)
+        end
+
 	else
-		TriggerServerEvent('bcc-medical:StopBleed', true, nil, perm)
+        local isBleeding = PlayerBleedCheck()
+
+        if isBleeding then
+            TriggerServerEvent('bcc-medical:StopBleed', true, nil, item, perm)
+            VORPcore.NotifyRightTip(_U('You_Used') .. itemLabel .. _U('onYourself'), 4000)
+        else
+            VORPcore.NotifyRightTip(_U('notBleeding'), 4000)
+        end
 	end
 end)
 
 RegisterCommand(Config.Command, function(source, args, rawCommand)
 	CheckPlayerJob()
 	if HasJob then
-		DoctorMenu()
-	else
-		MedicMenu()
+        local closestPlayer, closestDistance = GetClosestPlayer()
+        if closestPlayer ~= -1 and closestDistance <= 2.0 then
+            OpenDoctorMenu()
+            return
+        end
 	end
+    OpenPlayerMenu()
 end, false)
-
 
 RegisterCommand(Config.doctors.command, function(source, args, rawCommand)
 	if not IsCalled then
@@ -283,24 +336,23 @@ RegisterCommand(Config.doctors.command, function(source, args, rawCommand)
 end, false)
 
 local function MonitorBleed()
-    local player = GetPlayerServerId(PlayerId())
-	Wait(100)
-	TriggerServerEvent("bcc-medical:SendPlayers", player)
+    TriggerServerEvent('bcc-medical:SendPlayers')
 
 	CreateThread(function()
 		while true do
-			Wait(1000 * 20)
-            local IsBleeding = VORPcore.Callback.TriggerAwait('bcc-medical:CheckBleed')
-			if IsBleeding and IsBleeding == 1 then
-				Citizen.InvokeNative(0x835F131E7DC8F97A, PlayerPedId(), -25.00, 0, 0) -- ChangeEntityHealth
+            local playerPed = PlayerPedId()
+			Wait(20000) -- Check every 20 seconds
+            local isBleeding = PlayerBleedCheck()
+			if isBleeding then
+				Citizen.InvokeNative(0x835F131E7DC8F97A, playerPed, -25.00, 0, 0) -- ChangeEntityHealth
                 if Config.AnimOnBleed then
-                    local dict = "amb_wander@upperbody_idles@sick@both_arms@male_a@idle_a"
-				    if not IsEntityPlayingAnim(PlayerPedId(), dict, "idle_b", 3) then
+                    local dict = 'amb_wander@upperbody_idles@sick@both_arms@male_a@idle_a'
+				    if not IsEntityPlayingAnim(playerPed, dict, 'idle_b', 3) then
 					    RequestAnimDict(dict)
 					    while not HasAnimDictLoaded(dict) do
-						    Citizen.Wait(100)
+						    Citizen.Wait(10)
 					    end
-					    TaskPlayAnim(PlayerPedId(), dict, "idle_b", 5.0, 1.0 , 4000, 31, 0, false, false, false)
+					    TaskPlayAnim(playerPed, dict, 'idle_b', 5.0, 1.0 , 4000, 31, 0, false, false, false)
                     end
 				end
 			end
@@ -313,70 +365,72 @@ if not Config.devMode then
         MonitorBleed()
     end)
 else
-    RegisterCommand("dmgtest", function(source, args, rawCommand)
+    RegisterCommand('dmgtest', function(source, args, rawCommand)
 		Citizen.InvokeNative(0x835F131E7DC8F97A, PlayerPedId(), -10.00, 0, `weapon_pistol_mauser`)
 	end, false)
 
     MonitorBleed()
 end
 
-function DamageHashCheck()
-	if DamageHash == -842959696 then
-		DamageHash = 'appear to be hurt'
-	elseif DamageHash == 1885857703 or DamageHash == -544306709 then
-		DamageHash = 'appears to be burnt'
-	elseif Knives[tostring(DamageHash)] then
-		DamageHash = 'appears to be cut'
-	elseif Blunt[tostring(DamageHash)] then
-		DamageHash = 'appears to be bruised'
-	elseif Guns[tostring(DamageHash)] then
-		DamageHash = 'appears to be shot'
+function DamageHashCheck(damageHash)
+    local hash = damageHash
+    if not damageHash then
+        hash = DamageHash
+    end
+    local damageType
+
+	if (hash == -842959696) then
+		damageType = _U('hurt')
+
+	elseif (hash == 1885857703) or (hash == -544306709) then
+		damageType = _U('burn')
+
+	elseif Knives[hash] then
+		damageType = _U('cut')
+
+	elseif Blunt[hash] then
+		damageType = _U('bruised')
+
+	elseif Guns[hash] then
+		damageType = _U('shot')
+
 	else
-		DamageHash = 'None'
+		damageType = _U('None')
 	end
-	return DamageHash
+
+    return damageType
 end
 
 -- Function to check part and set damageboneself based on the bone parameter
-function CheckPartSelf(bone)
-	if bone == 6884 or bone == 43312 then
-		DamageBoneSelf = _U('RightLeg')
-	elseif bone == 65478 or bone == 55120 or bone == 45454 then
-		DamageBoneSelf = _U('LeftLeg')
-	elseif bone == 14411 or bone == 14410 then
-		DamageBoneSelf = _U('Stomach')
-	elseif bone == 14412 then
-		DamageBoneSelf = _U('Stomach_Chest')
-	elseif bone == 14414 then
-		DamageBoneSelf = _U('Chest')
-	elseif bone == 54187 or bone == 46065 then
-		DamageBoneSelf = _U('RightArm')
-	elseif bone == 37873 or bone == 53675 then
-		DamageBoneSelf = _U('LeftArm')
-	elseif bone == 0 then
-		DamageBoneSelf = "None"
-	end
-end
+function CheckPart(bone)
+    local damageBone = nil
 
--- Function to check part and set damagebone based on the bone parameter
-function CheckPartOther(bone)
-	if bone == 6884 or bone == 43312 then
-		DamageBone = _U('RightLeg')
-	elseif bone == 65478 or bone == 55120 or bone == 45454 then
-		DamageBone = _U('LeftLeg')
-	elseif bone == 14411 or bone == 14410 then
-		DamageBone = _U('Stomach')
-	elseif bone == 14412 then
-		DamageBone = _U('Stomach_Chest')
-	elseif bone == 14414 then
-		DamageBone = _U('Chest')
-	elseif bone == 54187 or bone == 46065 then
-		DamageBone = _U('RightArm')
-	elseif bone == 37873 or bone == 53675 then
-		DamageBone = _U('LeftArm')
-	elseif bone == 0 then
-		DamageBone = "None"
+	if (bone == 6884) or (bone == 43312) then
+		damageBone = _U('RightLeg')
+
+	elseif (bone == 65478) or (bone == 55120) or (bone == 45454) then
+		damageBone = _U('LeftLeg')
+
+	elseif (bone == 14411) or (bone == 14410) then
+		damageBone = _U('Stomach')
+
+	elseif (bone == 14412) then
+		damageBone = _U('Stomach_Chest')
+
+	elseif (bone == 14414) then
+		damageBone = _U('Chest')
+
+	elseif (bone == 54187) or (bone == 46065) then
+		damageBone = _U('RightArm')
+
+	elseif (bone == 37873) or (bone == 53675) then
+		damageBone = _U('LeftArm')
+
+	elseif (bone == 0) then
+		damageBone = _U('None')
 	end
+
+    return damageBone
 end
 
 function GetPlayers()
@@ -387,6 +441,22 @@ function GetPlayers()
 		end
 	end
 	return players
+end
+
+function PlayerBleedCheck()
+    local isBleeding = VORPcore.Callback.TriggerAwait('bcc-medical:CheckBleed')
+    if isBleeding and isBleeding == 1 then
+        return true
+    end
+    return false
+end
+
+function PatientBleedCheck(closestPlayerSrc)
+    local isBleeding = VORPcore.Callback.TriggerAwait('bcc-medical:CheckPatientBleed', closestPlayerSrc)
+    if isBleeding and isBleeding == 1 then
+        return true
+    end
+    return false
 end
 
 AddEventHandler('onResourceStop', function(resourceName)
