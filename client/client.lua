@@ -182,67 +182,141 @@ end
 
 function SpawnNPC()
     local modelName = Config.doctors.ped
-	local model = joaat(modelName)
+    local model = joaat(modelName)
     LoadModel(model, modelName)
 
-	local coords = GetEntityCoords(PlayerPedId())
-	local randomAngle = math.rad(math.random(0, 360))
-	local x = coords.x + math.sin(randomAngle) * math.random(1, 100) * 0.3
-	local y = coords.y + math.cos(randomAngle) * math.random(1, 100) * 0.3 -- End Number multiplied by is radius to player
-	local z = coords.z
-	local b, rdcoords, rdcoords2 = GetClosestVehicleNode(coords.x, coords.y, coords.z, 1, 10.0, 10.0)
-	if (rdcoords.x == 0.0 and rdcoords.y == 0.0 and rdcoords.z == 0.0) then
-		local valid, outPosition = GetSafeCoordForPed(x, y, z, false, 8)
-		if valid then
-			x = outPosition.x
-			y = outPosition.y
-			z = outPosition.z
-		end
-	else
-		local valid, outPosition = GetSafeCoordForPed(x, y, z, false, 16)
-		if valid then
-			x = outPosition.x
-			y = outPosition.y
-			z = outPosition.z
-		end
+    local playerPed = PlayerPedId()
+    local coords = GetEntityCoords(playerPed)
+    local x, y, z
+    local foundground = false
+    local groundZ = 0.0
 
-		local foundground, groundZ, normal = GetGroundZAndNormalFor_3dCoord(x, y, z)
-		if foundground then
-			z = groundZ
-		else
-			VORPcore.NotifyRightTip(_U('missground'), 4000)
-			DeleteEntity(CreatedPed)
-			CreatedPed = 0
-		end
-	end
+    while not foundground do
+        local randomAngle = math.rad(math.random(0, 360))
+        x = coords.x + math.sin(randomAngle) * math.random(1, 100) * 0.3
+        y = coords.y + math.cos(randomAngle) * math.random(1, 100) * 0.3
+        z = coords.z
 
-	if CreatedPed == 0 then
-		CreatedPed = CreatePed(model, x + 2.0, y, z, true, false, false, false)
-		Wait(500)
-	end
+        local valid, outPosition = GetSafeCoordForPed(x, y, z, false, 16)
+        if valid then
+            x, y, z = outPosition.x, outPosition.y, outPosition.z
+        else
+            Citizen.Wait(100)
+            goto continue
+        end
 
-	Citizen.InvokeNative(0x283978A15512B2FE, CreatedPed, true) -- SetRandomOutfitVariation
+        foundground, groundZ = GetGroundZAndNormalFor_3dCoord(x, y, z)
+        if foundground then
+            z = groundZ
+        end
 
-	FreezeEntityPosition(CreatedPed, false)
-	Citizen.InvokeNative(0x923583741DC87BCE, CreatedPed, 'default') -- SetPedDesiredLocoForModel
-	TaskGoToEntity(CreatedPed, PlayerPedId(), -1, 2.0, 5.0, 1073741824, 1)
-	Wait(7000)
-	DeleteEntity(CreatedPed)
-	CreatedPed = 0
+        ::continue::
+    end
+
+    local CreatedPed = CreatePed(model, x + 2.0, y, z, true, false, false, false)
+    Citizen.Wait(500)
+
+    Citizen.InvokeNative(0x283978A15512B2FE, CreatedPed, true)
+    FreezeEntityPosition(CreatedPed, false)
+    Citizen.InvokeNative(0x923583741DC87BCE, CreatedPed, "default")
+
+    -- Força o NPC a olhar para o jogador
+    TaskLookAtEntity(CreatedPed, playerPed, -1, 2048, 3)
+    Citizen.Wait(500)
+
+    -- Garante que o NPC não tenha tarefas pendentes
+    ClearPedTasks(CreatedPed)
+
+    -- Faz o NPC se mover para uma posição mais próxima do jogador
+    local moveToX = coords.x + 1.0
+    local moveToY = coords.y + 1.0
+    local moveToZ = coords.z
+
+    -- Remove as tarefas anteriores e garante uma nova tarefa de movimento
+    ClearPedTasksImmediately(CreatedPed)
+    TaskGoToCoordAnyMeans(CreatedPed, moveToX, moveToY, moveToZ, 2.0, 0, 0, 786603, 0xbf800000) -- Aumenta a velocidade
+    print("NPC is moving towards the player...")
+
+    local notificationId = "npc_distance_notification"
+    local lastDistance = -1 -- Valor inicial para comparação
+
+    while true do
+        Citizen.Wait(100)
+        local npcCoords = GetEntityCoords(CreatedPed)
+        local playerCoords = GetEntityCoords(playerPed)
+        local distance = #(npcCoords - playerCoords)
+
+        -- Arredonda a distância para o inteiro mais próximo
+        local roundedDistance = math.floor(distance + 0.5)
+
+        -- Atualiza a notificação somente se a distância mudar
+        if roundedDistance ~= lastDistance then
+            lastDistance = roundedDistance
+            VORPcore.NotifyRightTip("Distancia: " .. roundedDistance .. " metros", 1, notificationId)
+        end
+
+        -- Verifica se o NPC chegou perto do jogador
+        if distance < 2.0 then
+            print("NPC has reached the player.")
+            
+            -- Inicia a transição de tela para escurecer
+            -- Garante que a tarefa de pegar o jogador seja iniciada corretamente
+            ClearPedTasks(CreatedPed)
+            TaskPickupCarriableEntity(CreatedPed, playerPed)
+
+            -- Aguarda um tempo suficiente para garantir que o NPC tenha começado a carregar o jogador
+            Citizen.Wait(2000)
+
+            local isCarrying = IsPedCarryingSomething(CreatedPed)
+            if isCarrying then
+                print("NPC successfully picked up the player.")
+                -- Aguarda a conclusão da tarefa de pegar o jogador
+                Citizen.Wait(7000)
+                break
+            else
+                print("NPC failed to pick up the player. Trying again...")
+                -- Se falhar, pode tentar uma nova abordagem
+                TaskGoToCoordAnyMeans(CreatedPed, moveToX, moveToY, moveToZ, 2.0, 0, 0, 786603, 0xbf800000)
+            end
+        end
+
+        -- Recalcula a distância e a posição se necessário
+        if distance > 10.0 then
+            -- Se o NPC estiver muito longe, tenta uma nova abordagem
+            TaskGoToCoordAnyMeans(CreatedPed, coords.x + 1.0, coords.y + 1.0, coords.z, 2.0, 0, 0, 786603, 0xbf800000)
+            Citizen.Wait(500)
+        end
+    end
+
+    local newX = coords.x + math.random(-2, 2)
+    local newY = coords.y + math.random(-2, 2)
+    local newZ = coords.z
+
+    TaskPlaceCarriedEntityAtCoord(CreatedPed, playerPed, newX, newY, newZ, 5.0, 0)
+
+    -- Escurece a tela após o NPC começar a carregar o jogador
+    DoScreenFadeOut(800)
+    Citizen.Wait(850)
+    Citizen.Wait(5000)
+
+    DeleteEntity(CreatedPed)
+    CreatedPed = 0
+
+    -- Reviver o jogador
     local canRevive = VORPcore.Callback.TriggerAwait('bcc-medical:RevivePlayer')
     if canRevive then
         if Config.doctors.toHospital then
             DoScreenFadeOut(800)
-            Wait(800)
+            Citizen.Wait(850)
             TriggerServerEvent('bcc-medical:PlayerRespawn')
-            while IsScreenFadedOut do
-                Wait(50)
+            while IsScreenFadedOut() do
+                Citizen.Wait(50)
             end
         else
             DoScreenFadeOut(800)
-            Wait(800)
+            Citizen.Wait(850)
             TriggerServerEvent('bcc-medical:PlayerRevive')
-            Wait(800)
+            Citizen.Wait(800)
             DoScreenFadeIn(800)
         end
     end
@@ -324,15 +398,23 @@ RegisterCommand(Config.Command, function(source, args, rawCommand)
     OpenPlayerMenu()
 end, false)
 
+function CallMedicalService()
+    if not IsCalled then
+        IsCalled = true
+        TriggerServerEvent('bcc-medical:AlertJobs')
+        Wait(Config.doctors.timer * 60000)
+        IsCalled = false
+    else
+        VORPcore.NotifyRightTip(_U('cooldown'), 4000)
+    end
+end
+
+-- Exporte a função
+exports("CallMedicalService", CallMedicalService)
+
+-- Comando opcional
 RegisterCommand(Config.doctors.command, function(source, args, rawCommand)
-	if not IsCalled then
-		IsCalled = true
-		TriggerServerEvent('bcc-medical:AlertJobs')
-		Wait(Config.doctors.timer * 60000)
-		IsCalled = false
-	else
-		VORPcore.NotifyRightTip(_U('cooldown'), 4000)
-	end
+    CallMedicalService()
 end, false)
 
 local function MonitorBleed()
