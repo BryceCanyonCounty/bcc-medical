@@ -64,22 +64,24 @@ Config.synsociety = false
 -----------------------------------------------------
 
 MedicJobs = { -- Jobs that count as Doctors
-    "doctor",
-    "police",
-    "shaman"
+    'doctor',
+    'police',
+    'shaman'
 }
 -----------------------------------------------------
 
+-- NPC Doctor Config
 Config.doctors = {
-    ped = "u_m_m_rhddoctor_01", -- Model of NPC Doctor or replace with other ped model below
+    ped = 'u_m_m_rhddoctor_01', -- Model of NPC Doctor or replace with other ped model below
     --am_valentinedoctors_females_01
     --cs_sddoctor_01
     --cs_creoledoctor
     --u_m_m_rhddoctor_01
     --u_m_m_valdoctor_01
 
-    command = "sendhelp", -- Command to Call for NPC Doctor
-    amount = 45,          -- Payment for Revive from NPC Doctor
+    command = 'sendhelp', -- Command to Call for NPC Doctor
+    currency = 0,         -- Currency for Revive from NPC Doctor / 0 = cash, 1 = gold
+    amount = 45,          -- Currency Amount for Revive from NPC Doctor
     timer = 1,            -- How many minutes between calls
     toHospital = true     -- if true, player will be respawned to nearby hospital else will be revived on spot
 }
