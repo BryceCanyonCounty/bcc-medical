@@ -2,25 +2,23 @@ local VORPcore = exports.vorp_core:GetCore()
 
 local StaffTable = {}
 
-local function CheckPlayerJob(playerJob)
+local function CheckPlayerJob(src)
+    local character = VORPcore.getUser(src).getUsedCharacter
+    local playerJob = character.job
     for _, job in ipairs(MedicJobs) do
         if (playerJob == job) then
             return true
         end
     end
+    return false
 end
 
 VORPcore.Callback.Register('bcc-medical:CheckJob', function(source, cb)
     local src = source
     local user = VORPcore.getUser(src)
     if not user then return cb(false) end
-    local Character = user.getUsedCharacter
-    local playerJob = Character.job
 
-    if not playerJob then return cb(false) end
-
-    local hasJob = false
-    hasJob = CheckPlayerJob(playerJob)
+    local hasJob = CheckPlayerJob(src)
     if hasJob then
         cb(true)
     else
@@ -59,7 +57,7 @@ RegisterNetEvent('bcc-medical:AlertJobs', function()
         if CheckPlayer(StaffTable, MedicJobs[1]) or CheckPlayer(StaffTable, MedicJobs[2]) then
             VORPcore.NotifyRightTip(src, _U('doctoractive'), 4000)
         else
-            TriggerClientEvent('bcc-medical:FindDoc', src)
+            TriggerClientEvent('bcc-medical:CallNpcDoctor', src)
             return
         end
     else
@@ -72,7 +70,7 @@ RegisterNetEvent('bcc-medical:AlertJobs', function()
         end
     end
     if docs < 1 then
-        TriggerClientEvent('bcc-medical:FindDoc', src)
+        TriggerClientEvent('bcc-medical:CallNpcDoctor', src)
     else
         VORPcore.NotifyRightTip(src, _U('doctoractive2'), 4000)
         --VORPcore.NotifyRightTip(src, _U('doctoractive'), 4000) -- Send /alert... needs to be added
@@ -130,21 +128,26 @@ RegisterServerEvent('bcc-medical:TakeItem', function(label, item, quantity)
     VORPcore.AddWebhook(Config.WebhookTitle, Config.Webhook, playername .. ' took ' .. quantity .. ' ' .. label)
 end)
 
-VORPcore.Callback.Register('bcc-medical:RevivePlayer', function(source, cb)
+VORPcore.Callback.Register('bcc-medical:CurrencyCheck', function(source, cb)
     local src = source
     local user = VORPcore.getUser(src)
     if not user then return cb(false) end
     local Character = user.getUsedCharacter
-    local money = Character.money
+    local currency = Config.doctors.currency
     local cost = Config.doctors.amount
+    local money = nil
+    if currency == 0 then
+        money = Character.money
+    elseif currency == 1 then
+        money = Character.gold
+    end
 
     if not Config.gonegative and money < cost then
-        VORPcore.NotifyRightTip(src, _U('notenough') .. cost, 4000)
+        VORPcore.NotifyRightTip(src, _U('notenough'), 4000)
         return cb(false)
     end
 
-    Character.removeCurrency(0, cost) -- Remove money 1000 | 0 = money, 1 = gold, 2 = rol
-    VORPcore.NotifyRightTip(src, _U('revived') .. cost, 4000)
+    Character.removeCurrency(currency, cost)
     cb(true)
 end)
 
@@ -242,8 +245,13 @@ CreateThread(function ()
     for _, itemCfg in pairs(Config.ReviveItems) do
         exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
             local src = data.source
+            local doctor = CheckPlayerJob(src)
             exports.vorp_inventory:closeInventory(src)
-            TriggerClientEvent('bcc-medical:GetClosestPlayerRevive', src, itemCfg.item)
+            if not doctor then
+                VORPcore.NotifyRightTip(src, _U('you_do_not_have_job'), 4000)
+                return
+            end
+            TriggerClientEvent('bcc-medical:ReviveClosestPlayer', src, itemCfg.item)
             VORPcore.NotifyRightTip(src, _U('You_Used') .. itemCfg.label, 4000)
         end)
     end
@@ -263,7 +271,12 @@ CreateThread(function ()
     for _, itemCfg in pairs(Config.Stitches) do
         exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
             local src = data.source
+            local doctor = CheckPlayerJob(src)
             exports.vorp_inventory:closeInventory(src)
+            if not doctor then
+                VORPcore.NotifyRightTip(src, _U('you_do_not_have_job'), 4000)
+                return
+            end
             TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', src, itemCfg.item, itemCfg.label, true)
         end)
     end
