@@ -20,7 +20,7 @@ Planned to come: Checking cause of death plus some pretty UI stuff and more! ;)
 - Checking cause of wound
 - Bleeding
 - NPC Model Config
-- Price Config
+- Price Config using cash or gold
 - Command Config
 - Job Config
 - Translation Files
