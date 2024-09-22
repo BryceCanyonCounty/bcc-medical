@@ -4,7 +4,7 @@ rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aw
 
 lua54 'yes'
 
-version '0.3.0'
+version '0.3.1'
 
 description 'All in one player and NPC medic script'
 
