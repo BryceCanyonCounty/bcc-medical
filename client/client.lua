@@ -389,13 +389,10 @@ RegisterNetEvent('bcc-medical:GetClosestPlayerHeal', function(item, itemLabel, p
 end)
 
 RegisterCommand(Config.Command, function(source, args, rawCommand)
-    CheckPlayerJob()
-    if HasJob then
-        local closestPlayer, closestDistance = GetClosestPlayer()
-        if closestPlayer ~= -1 and closestDistance <= 2.0 then
-            OpenDoctorMenu()
-            return
-        end
+    local closestPlayer, closestDistance = GetClosestPlayer()
+    if closestPlayer ~= -1 and closestDistance <= 2.0 then
+        OpenDoctorMenu()
+        return
     end
     OpenPlayerMenu()
 end, false)
