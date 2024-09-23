@@ -11,12 +11,13 @@ Config.keys = {
 }
 -----------------------------------------------------
 
+-- Bleed Config
 Config.bleedChance = 75          -- Chance of bleed (lower - easier, higher - harder)
 
 Config.StopBleedOnRevive = true  -- Stops Player Bleeding on Revive
 Config.StopBleedOnRespawn = true -- Stops Player Bleeding on Respawn
 
-Config.EnableBleedAfter = 0      -- Used in case of temp bleed stop (Not yet Implemented)
+Config.restartBleedTime = 60      -- Time in minutes to Restart Bleed After Temp Healing with Bandage Item
 
 Config.AnimOnBleed = true        -- should Player animate on bleed
 -----------------------------------------------------
