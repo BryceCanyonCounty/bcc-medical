@@ -363,15 +363,14 @@ RegisterNetEvent('bcc-medical:ReviveClosestPlayer', function(reviveItem)
     DoScreenFadeIn(800)
 end)
 
-RegisterNetEvent('bcc-medical:GetClosestPlayerHeal', function(item, itemLabel, perm)
+RegisterNetEvent('bcc-medical:CheckPlayerBleeding', function(item, itemLabel, perm)
     local closestPlayer, closestDistance = GetClosestPlayer()
-
     if closestPlayer ~= -1 and closestDistance <= 1.5 then
         local closestPlayerSrc = GetPlayerServerId(closestPlayer)
         local isBleeding = PatientBleedCheck(closestPlayerSrc)
 
         if isBleeding then
-            TriggerServerEvent('bcc-medical:StopBleed', false, closestPlayerSrc, item, perm)
+            TriggerServerEvent('bcc-medical:ManageBleedStatus', false, closestPlayerSrc, item, perm)
             VORPcore.NotifyRightTip(_U('You_Used') .. itemLabel .. _U('onPatient'), 4000)
         else
             VORPcore.NotifyRightTip(_U('patientNotBleeding'), 4000)
@@ -380,7 +379,7 @@ RegisterNetEvent('bcc-medical:GetClosestPlayerHeal', function(item, itemLabel, p
         local isBleeding = PlayerBleedCheck()
 
         if isBleeding then
-            TriggerServerEvent('bcc-medical:StopBleed', true, nil, item, perm)
+            TriggerServerEvent('bcc-medical:ManageBleedStatus', true, nil, item, perm)
             VORPcore.NotifyRightTip(_U('You_Used') .. itemLabel .. _U('onYourself'), 4000)
         else
             VORPcore.NotifyRightTip(_U('notBleeding'), 4000)
