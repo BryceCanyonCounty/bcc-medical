@@ -1,6 +1,7 @@
 local VORPcore = exports.vorp_core:GetCore()
 
 local StaffTable = {}
+local TempHealed = {}
 
 local function CheckPlayerJob(src)
     local character = VORPcore.getUser(src).getUsedCharacter
@@ -176,36 +177,36 @@ RegisterNetEvent('bcc-medical:ReviveClosestPlayer', function(reviveItem, closest
     end
 end)
 
-RegisterServerEvent('bcc-medical:StopBleed', function(mySelf, closestPlayer, item, perm)
+RegisterServerEvent('bcc-medical:ManageBleedStatus', function(mySelf, closestPlayer, item, perm)
+    -- mySelf Character
     local src = source
     local user = VORPcore.getUser(src)
     if not user then return end
     local character = user.getUsedCharacter
 
+    -- Remove Bandage/Stitches Item from My Inventory
     local count = exports.vorp_inventory:getItemCount(src, nil, item)
     if count > 0 then
         exports.vorp_inventory:subItem(src, item, 1)
     end
 
+    -- closestPlayer Character
     if not mySelf then
         local targetUser = VORPcore.getUser(closestPlayer)
         if not targetUser then return end
         character = targetUser.getUsedCharacter
     end
 
+    -- Database Character Data to Update
     local identifier = character.identifier
     local charId = character.charIdentifier
 
-    -- if not perm then
-    --     local result = MySQL.query.await('SELECT `bleed` FROM `characters` WHERE `charidentifier` = ? AND `identifier` = ?', { charId, identifier })
-    --     if result and result[1].bleed == 1 then
-    --         MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, charId, identifier })
-    --         Wait(60000 * 60 * 6) -- 6 hours / Find a better way to do this
-    --         MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 1, charId, identifier })
-    --     end
-    -- else
-    MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, charId, identifier })
-    --end
+    if not perm then
+        MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 2, charId, identifier })
+        TempHealed[tostring(charId)] = os.time()
+    else
+        MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 0, charId, identifier })
+    end
 end)
 
 VORPcore.Callback.Register('bcc-medical:CheckBleed', function(source, cb)
@@ -217,10 +218,29 @@ VORPcore.Callback.Register('bcc-medical:CheckBleed', function(source, cb)
     local charid = character.charIdentifier
 
     local result = MySQL.query.await('SELECT `bleed` FROM `characters` WHERE `charidentifier` = ? AND `identifier` = ?', { charid, identifier })
-
     if not result or not result[1] then return cb(false) end
+    local bleed = result[1].bleed
 
-    cb(result[1].bleed)
+    -- If Temp Healed with Bandage Item
+    if bleed == 2 then
+        local onList = false
+        for id, time in pairs(TempHealed) do
+            if tostring(charid) == id then
+                onList = true
+                if os.difftime(os.time(), time) >= Config.restartBleedTime * 60 then
+                    MySQL.query.await('UPDATE `characters` SET `bleed` = ? WHERE `charidentifier` = ? AND `identifier` = ?', { 1, charid, identifier })
+                    TempHealed[id] = nil
+                    bleed = 1
+                    break
+                end
+            end
+        end
+        if not onList then
+            TempHealed[tostring(charid)] = os.time()
+        end
+    end
+
+    cb(bleed)
 end)
 
 VORPcore.Callback.Register('bcc-medical:CheckPatientBleed', function(source, cb, patientSrc)
@@ -242,27 +262,11 @@ VORPcore.Callback.Register('bcc-medical:CheckPatientBleed', function(source, cb,
 end)
 
 CreateThread(function ()
-    for _, itemCfg in pairs(Config.ReviveItems) do
-        exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
-            local src = data.source
-            local doctor = CheckPlayerJob(src)
-            exports.vorp_inventory:closeInventory(src)
-            if not doctor then
-                VORPcore.NotifyRightTip(src, _U('you_do_not_have_job'), 4000)
-                return
-            end
-            TriggerClientEvent('bcc-medical:ReviveClosestPlayer', src, itemCfg.item)
-            VORPcore.NotifyRightTip(src, _U('You_Used') .. itemCfg.label, 4000)
-        end)
-    end
-end)
-
-CreateThread(function ()
     for _, itemCfg in pairs(Config.BandageItems) do
         exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
             local src = data.source
             exports.vorp_inventory:closeInventory(src)
-            TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', src, itemCfg.item, itemCfg.label, false)
+            TriggerClientEvent('bcc-medical:CheckPlayerBleeding', src, itemCfg.item, itemCfg.label, false)
         end)
     end
 end)
@@ -277,7 +281,23 @@ CreateThread(function ()
                 VORPcore.NotifyRightTip(src, _U('you_do_not_have_job'), 4000)
                 return
             end
-            TriggerClientEvent('bcc-medical:GetClosestPlayerHeal', src, itemCfg.item, itemCfg.label, true)
+            TriggerClientEvent('bcc-medical:CheckPlayerBleeding', src, itemCfg.item, itemCfg.label, true)
+        end)
+    end
+end)
+
+CreateThread(function ()
+    for _, itemCfg in pairs(Config.ReviveItems) do
+        exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
+            local src = data.source
+            local doctor = CheckPlayerJob(src)
+            exports.vorp_inventory:closeInventory(src)
+            if not doctor then
+                VORPcore.NotifyRightTip(src, _U('you_do_not_have_job'), 4000)
+                return
+            end
+            TriggerClientEvent('bcc-medical:ReviveClosestPlayer', src, itemCfg.item)
+            VORPcore.NotifyRightTip(src, _U('You_Used') .. itemCfg.label, 4000)
         end)
     end
 end)
@@ -327,3 +347,38 @@ AddEventHandler('vorp_core:Server:OnPlayerRespawn', function(playerSource)
         UpdateBleed(playerSource)
     end
 end)
+
+function printTable(t)
+    local printTable_cache = {}
+    local function sub_printTable(t, indent)
+
+        if (printTable_cache[tostring(t)]) then
+            print(indent .. "*" .. tostring(t))
+        else
+            printTable_cache[tostring(t)] = true
+            if (type(t) == "table") then
+                for pos,val in pairs(t) do
+                    if (type(val) == "table") then
+                        print(indent .. "[" .. pos .. "] => " .. tostring(t).. " {")
+                        sub_printTable(val, indent .. string.rep(" ", string.len(pos)+8))
+                        print(indent .. string.rep(" ", string.len(pos)+6 ) .. "}")
+                    elseif (type(val) == "string") then
+                        print(indent .. "[" .. pos .. '] => "' .. val .. '"')
+                    else
+                        print(indent .. "[" .. pos .. "] => " .. tostring(val))
+                    end
+                end
+            else
+                print(indent..tostring(t))
+            end
+        end
+    end
+
+    if (type(t) == "table") then
+        print(tostring(t) .. " {")
+        sub_printTable(t, "  ")
+        print("}")
+    else
+        sub_printTable(t, "  ")
+    end
+end
