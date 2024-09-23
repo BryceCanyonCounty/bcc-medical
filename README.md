@@ -26,6 +26,21 @@ Planned to come: Checking cause of death plus some pretty UI stuff and more! ;)
 - Webhook for revivals
 - Doctors offices for collecting equipment
 
+## Bleeding
+- Database bleed values
+  - 0 = Not bleeding
+  - 1 = Bleeding
+  - 2 = Bleeding temporarily stopped
+
+- Bandage items
+  - Can be used by any player for themselves or someone else
+  - Will stop bleeding for the length of time set in the config
+  - After that time expires bleeding will start again
+
+- Stitches Items
+  - Can only be used by a player with a doctor job
+  - Will stop bleeding permanently
+
 ## Commands
 - `/medic` Use in chat to open Medic Menu
 - `/sendhelp` Use to Call for NPC Doctor
