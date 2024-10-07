@@ -88,6 +88,45 @@ Config.doctors = {
 }
 -----------------------------------------------------
 
+Config.MedicAssistant = true
+Config.AssistantReviveMoney = 35
+Config.AssistantHealMoney = 20
+Config.MedicAssistantBlips = false
+Config.MedicAssistantNPC = true
+Config.MedicAssistantLocations = {
+    {
+        coords = vector3(-283.51, 807.64, 119.39), -- Valentine
+        NpcHeading = 140.9,
+        NpcModel = 'am_valentinedoctors_females_01'
+    },
+    {
+        coords = vector3(-1802.9, -432.84, 158.83), -- Strawberry
+        NpcHeading = 33.47,
+        NpcModel = 'CS_SDDoctor_01'
+    },
+    {
+        coords = vector3(-789.54, -1307.17, 43.8), -- Blackwater
+        NpcHeading = 307.05,
+        NpcModel = 'CS_SDDoctor_01'
+    },
+    {
+        coords = vector3(1370.34, -1312.62, 77.94), -- Rhodes
+        NpcHeading = 138.55,
+        NpcModel = 'u_m_m_rhddoctor_01'
+    },
+    {
+        coords = vector3(2722.21, -1234.15, 50.37), -- Saint Denis
+        NpcHeading = 4.84,
+        NpcModel = 'CS_SDDoctor_01'
+    },
+    {
+        coords = vector3(2919.72, 1354.12, 44.83), -- Annesburg
+        NpcHeading = 252.48,
+        NpcModel = 'CS_SDDoctor_01'
+    }
+}
+-----------------------------------------------------
+
 Config.BlipColors = {
     LIGHT_BLUE    = 'BLIP_MODIFIER_MP_COLOR_1',
     DARK_RED      = 'BLIP_MODIFIER_MP_COLOR_2',

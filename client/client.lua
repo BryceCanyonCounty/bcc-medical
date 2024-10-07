@@ -3,6 +3,8 @@ local CabinetPrompt
 local HasJob = false
 local IsCalled = false
 local NpcDoctor = 0
+local CreatedBlip = {}
+local CreatedNpc = {}
 DamageBone = _U('None')
 DamageBoneSelf = _U('None')
 DamageHash = nil
@@ -55,6 +57,69 @@ CreateThread(function()
         end
     end
 end)
+
+if Config.MedicAssistant then
+    CreateThread(function()
+        local HealPrompt = BccUtils.Prompts:SetupPromptGroup()  -- Setup Prompt Group for Healing
+        local RevivePrompt = BccUtils.Prompts:SetupPromptGroup()  -- Setup Prompt Group for Reviving
+        local medicHealPrompt = HealPrompt:RegisterPrompt(_U('healprompt'), 0x760A9C6F, 1, 1, true, 'hold', { timedeventhash = 'MEDIUM_TIMED_EVENT' })
+        local medicRevivePrompt = RevivePrompt:RegisterPrompt(_U('reviveprompt'), 0xE30CD707, 1, 1, true, 'hold', { timedeventhash = 'MEDIUM_TIMED_EVENT' })
+
+        -- Setup Medic Blips
+        if Config.MedicAssistantBlips then
+            for _, v in pairs(Config.MedicAssistantLocations) do
+                local MedicBlip = BccUtils.Blips:SetBlip(_U('medicAssistant'), 'blip_job_board', 3.2, v.coords.x, v.coords.y, v.coords.z)
+                CreatedBlip[#CreatedBlip + 1] = MedicBlip
+            end
+        end
+
+        -- Setup Medic NPCs
+        if Config.MedicAssistantNPC then
+            for _, v in pairs(Config.MedicAssistantLocations) do
+                local medicped = BccUtils.Ped:Create(v.NpcModel, v.coords.x, v.coords.y, v.coords.z - 1, 0, 'world', false)
+                CreatedNpc[#CreatedNpc + 1] = medicped
+                medicped:Freeze()
+                medicped:SetHeading(v.NpcHeading)
+                medicped:Invincible()
+            end
+        end
+
+        -- Main loop
+        while true do
+            Wait(1)
+            local playerCoords = GetEntityCoords(PlayerPedId())
+            local playerPed = PlayerPedId()
+
+            for _, v in pairs(Config.MedicAssistantLocations) do
+                local dist = #(playerCoords - v.coords)
+
+                if dist < 2 then
+                    -- If the player is alive, show the heal prompt
+                    if not IsEntityDead(playerPed) then
+                        HealPrompt:ShowGroup(_U('medicAssistant'))
+                        if medicHealPrompt:HasCompleted() then
+                            if GetEntityHealth(playerPed) ~= GetEntityMaxHealth(playerPed) then
+                                TriggerServerEvent('bcc_medical:checkout')
+                            else
+                                VORPcore.NotifyAvanced(_U('noNeedMedicalAssistance'), "blips", "blip_supplies_health", "COLOR_GREEN", 4000)
+                            end
+                        end
+                    else
+                        -- If the player is dead, show the revive prompt
+                        RevivePrompt:ShowGroup("Medic")
+                        if medicRevivePrompt:HasCompleted() then
+                            if GetEntityHealth(playerPed) ~= GetEntityMaxHealth(playerPed) then
+                                TriggerServerEvent('bcc_medical:checkoutRevive')
+                            else
+                                VORPcore.NotifyAvanced(_U('noNeedMedicalAssistance'), "blips", "blip_supplies_health", "COLOR_GREEN", 4000)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
 
 RegisterNetEvent('bcc-medical:ApplyBleed', function()
     math.randomseed(GetGameTimer())
@@ -531,12 +596,22 @@ AddEventHandler('onResourceStop', function(resourceName)
         return
     end
     ClearPedTasksImmediately(PlayerPedId())
+
+    for _, npcs in ipairs(CreatedNpc) do
+        npcs:Remove()
+    end
+
+    for _, blips in ipairs(CreatedBlip) do
+        blips:Remove()
+    end
+
     for _, officeCfg in pairs(Offices) do
         if officeCfg.Blip then
             RemoveBlip(officeCfg.Blip)
             officeCfg.Blip = nil
         end
     end
+
     if NpcDoctor ~= 0 then
         DeleteEntity(NpcDoctor)
         NpcDoctor = 0

@@ -332,6 +332,68 @@ local function UpdateBleed(playerSource)
     end
 end
 
+RegisterNetEvent('bcc_medical:checkout')
+AddEventHandler('bcc_medical:checkout', function()
+    local _source = source
+    local user = VORPcore.getUser(_source)
+    
+    if not user then return end
+    
+    -- Get character data
+    local Char = user.getUsedCharacter
+    local identifier = Char.identifier
+    local Charid = Char.charIdentifier
+    local money = Char.money
+
+    -- Check if the player has enough money
+    if money < Config.AssistantHealMoney then
+        -- Send notification for insufficient money
+        VORPcore.NotifyAvanced(_source, _U('notEnoughMoney') .. (Config.AssistantHealMoney - money), "inventory_items", "money_billstack", "COLOR_RED", 4000)
+        return
+    end
+
+    -- Deduct the money from the character
+    Char.removeCurrency(0, Config.AssistantHealMoney)  -- 0 for dollars, 1 for gold if needed
+
+    -- Heal the player
+    VORPcore.Player.Heal(_source)
+
+    -- Update the database to stop the bleeding
+    UpdateBleed(_source)
+
+    -- Send a notification for successful healing
+    VORPcore.NotifyAvanced(_source, _U('medicalAssistantTreated') .. Config.AssistantHealMoney, "inventory_items", "money_billstack", "COLOR_GREEN", 4000)
+
+end)
+
+RegisterNetEvent('bcc_medical:checkoutRevive')
+AddEventHandler('bcc_medical:checkoutRevive', function()
+    local _source = source
+    local user = VORPcore.getUser(_source)
+    
+    if not user then return end
+    
+    -- Get character data
+    local Char = user.getUsedCharacter
+    local identifier = Char.identifier
+    local Charid = Char.charIdentifier
+    local money = Char.money
+
+    if not Config.gonegative and money < Config.AssistantReviveMoney then
+        -- Send notification for insufficient money
+        VORPcore.NotifyAvanced(_source, _U('notEnoughMoney') .. (Config.AssistantReviveMoney - money), "inventory_items", "money_billstack", "COLOR_RED", 4000)
+        return
+    end
+
+    Char.removeCurrency(0, Config.AssistantReviveMoney)  -- 0 for dollars, 1 for gold if needed
+
+    VORPcore.Player.Revive(_source)
+
+    UpdateBleed(_source)
+
+    VORPcore.NotifyAvanced(_source, _U('medicalAssistantRevive') .. Config.AssistantReviveMoney, "inventory_items", "money_billstack", "COLOR_GREEN", 4000)
+end)
+
 -- Per vorp docs these only require AddEventHandler
 -- RegisterNetEvent has been added as player received error 'not safe for net'
 RegisterNetEvent('vorp_core:Server:OnPlayerRevive')
