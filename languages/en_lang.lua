@@ -57,4 +57,11 @@ Locales["en_lang"] = {
     meters = " meters",
     tooFarFromPlayer = "You are too far from the patient",
     gold = " gold",
+    healprompt = "Heal yourself",
+    reviveprompt = "Revive yourself",
+    medicAssistant = "Medic Assistant",
+    noNeedMedicalAssistance = "You don't need medical assistance",
+    notEnoughMoney = "You don't have enough money, you need $",
+    medicalAssistantTreated = "The doctor treated you and you paid $",
+    medicalAssistantRevive = "You were revived by the doctor and you paid $"
 }
