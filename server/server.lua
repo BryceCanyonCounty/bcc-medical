@@ -276,8 +276,9 @@ CreateThread(function ()
         exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
             local src = data.source
             local doctor = CheckPlayerJob(src)
+            local itemNeedCount = exports.vorp_inventory:getItemCount(src, nil, Config.ShamanItem)
             exports.vorp_inventory:closeInventory(src)
-            if not doctor then
+            if not doctor and itemNeedCount <= 0 then
                 VORPcore.NotifyRightTip(src, _U('you_do_not_have_job'), 4000)
                 return
             end
@@ -291,8 +292,9 @@ CreateThread(function ()
         exports.vorp_inventory:registerUsableItem(itemCfg.item, function(data)
             local src = data.source
             local doctor = CheckPlayerJob(src)
+            local itemNeedCount = exports.vorp_inventory:getItemCount(src, nil, Config.ShamanItem)
             exports.vorp_inventory:closeInventory(src)
-            if not doctor then
+            if not doctor and itemNeedCount <= 0 then
                 VORPcore.NotifyRightTip(src, _U('you_do_not_have_job'), 4000)
                 return
             end
