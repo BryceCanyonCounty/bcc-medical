@@ -143,13 +143,64 @@ VORPcore.Callback.Register('bcc-medical:CurrencyCheck', function(source, cb)
         money = Character.gold
     end
 
-    if not Config.gonegative and money < cost then
-        VORPcore.NotifyRightTip(src, _U('notenough'), 4000)
-        return cb(false)
+    if Config.doctors.useFixCost then
+        if not Config.gonegative and money < cost then
+            VORPcore.NotifyRightTip(src, _U('notenough'), 4000)
+            return cb(false)
+        end
+    
+        Character.removeCurrency(currency, cost)
+        cb(true)
     end
 
-    Character.removeCurrency(currency, cost)
-    cb(true)
+    if Config.doctors.usePercentageCost then
+        Character.removeCurrency(currency, money / 100 * cost)
+        cb(true)
+    end
+end)
+
+RegisterServerEvent("legacy_medic:TakePlayerItems")
+AddEventHandler("legacy_medic:TakePlayerItems", function()
+    local src = source
+    local Character = VORPcore.getUser(_source).getUsedCharacter
+    local money = Character.money
+    local rnd = math.random(1, 4)
+    if rnd == 1 then
+        VORPcore.NotifyRightTip(_source,_U('TakeItems1'), 4000)
+    end
+    if rnd == 2 then
+        VORPcore.NotifyRightTip(_source,_U('TakeItems2'), 4000)
+        exports.vorp_inventory:getUserInventoryItems(_source, function(Userinventory)
+            for i, item in pairs(Userinventory) do
+                Wait(20)
+                exports.vorp_inventory:subItem(_source, item.name, item.count, item.metadata)
+            end
+        end)
+    end
+    if rnd == 3 then
+        VORPcore.NotifyRightTip(_source,_U('TakeItems3'), 4000)
+        exports.vorp_inventory:getUserInventoryWeapons(_source, function(Userweapons)
+            for i, weapon in pairs(Userweapons) do
+                exports.vorp_inventory:subWeapon(_source, weapon.id)
+                exports.vorp_inventory:deleteWeapon(_source, weapon.id)
+            end
+        end)
+        exports.vorp_inventory:getUserInventoryItems(_source, function(Userinventory)
+            for i, item in pairs(Userinventory) do
+                Wait(20)
+                exports.vorp_inventory:subItem(_source, item.name, item.count, item.metadata)
+            end
+        end)
+    end
+    if rnd == 4 then
+        VORPcore.NotifyRightTip(_source,_U('TakeItems4'), 4000)
+        exports.vorp_inventory:getUserWeapons(_source, function(Userweapons)
+            for i, weapon in pairs(Userweapons) do
+                exports.vorp_inventory:subWeapon(_source, weapon.id)
+                exports.vorp_inventory:deleteWeapon(_source, weapon.id)
+            end
+        end)
+    end
 end)
 
 RegisterNetEvent('bcc-medical:ReviveClosestPlayer', function(reviveItem, closestPlayer)
