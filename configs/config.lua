@@ -48,6 +48,9 @@ Config.ReviveItems = {
 Config.Stitches = {
     { item = 'NeedleandThread', label = 'Needle and Thread' }
 }
+
+Config.ShamanItem = "shaman_rod"    -- This item allows players to skip the job check
+
 -----------------------------------------------------
 
 Config.usewebhook = true
