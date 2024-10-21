@@ -61,9 +61,6 @@ Config.WebhookTitle = 'Medic'
 Config.Command = 'medic' -- Slash command to use in chat to open Medic Menu
 -----------------------------------------------------
 
-Config.gonegative = false -- Can you go negative paying for NPC revival
------------------------------------------------------
-
 Config.synsociety = false
 -----------------------------------------------------
 
@@ -83,11 +80,15 @@ Config.doctors = {
     --u_m_m_rhddoctor_01
     --u_m_m_valdoctor_01
 
-    command = 'sendhelp', -- Command to Call for NPC Doctor
-    currency = 0,         -- Currency for Revive from NPC Doctor / 0 = cash, 1 = gold
-    amount = 45,          -- Currency Amount for Revive from NPC Doctor
-    timer = 1,            -- How many minutes between calls
-    toHospital = true     -- if true, player will be respawned to nearby hospital else will be revived on spot
+    command = 'sendhelp',       -- Command to Call for NPC Doctor
+    currency = 0,               -- Currency for Revive from NPC Doctor / 0 = cash, 1 = gold
+    useFixCost = false,         -- Takes a fixed amount of money after NPC-Revive !! Do not use together with "usePercentageCost", just choose one
+    usePercentageCost = true,   -- Takes a percentage amount of money after NPC-Revive!! Do not use together with "useFixCost", just choose one
+    amount = 25,                -- Currency Amount or Percentage for Revive from NPC Doctor
+    gonegative = false,         -- Can you go negative paying for NPC revival // Works only if useFixCost = true
+    timer = 1,                  -- How many minutes between calls
+    toHospital = true,          -- if true, player will be respawned to nearby hospital else will be revived on spot
+    RandomRemove = true,        -- NPC Revive randomly takes items from the inventory. Either nothing, just items, just weapons or everything
 }
 -----------------------------------------------------
 
