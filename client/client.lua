@@ -363,11 +363,17 @@ RegisterNetEvent('bcc-medical:CallNpcDoctor', function()
     -- Revive the player
     if Config.doctors.toHospital then
         TriggerServerEvent('bcc-medical:PlayerRespawn')
+        if Config.doctors.RandomRemove then
+            TriggerServerEvent('bcc-medical:TakePlayerItems')
+        end
         while IsScreenFadedOut() do
             Wait(50)
         end
     else
         TriggerServerEvent('bcc-medical:PlayerRevive')
+        if Config.doctors.RandomRemove then
+            TriggerServerEvent('bcc-medical:TakePlayerItems')
+        end
         Wait(800)
         DoScreenFadeIn(800)
     end
