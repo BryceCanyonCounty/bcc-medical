@@ -63,5 +63,11 @@ Locales["en_lang"] = {
     noNeedMedicalAssistance = "You don't need medical assistance",
     notEnoughMoney = "You don't have enough money, you need $",
     medicalAssistantTreated = "The doctor treated you and you paid $",
-    medicalAssistantRevive = "You were revived by the doctor and you paid $"
+    medicalAssistantRevive = "You were revived by the doctor and you paid $",
+
+    -- Take Items
+    TakeItems1 = "Take nothing!",
+    TakeItems2 = "Take Items!",
+    TakeItems3 = "Take All!",
+    TakeItems4 = "Take Weapons!",
 }
