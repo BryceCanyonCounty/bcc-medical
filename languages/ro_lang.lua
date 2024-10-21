@@ -63,5 +63,11 @@ Locales["ro_lang"] = {
     noNeedMedicalAssistance = "Nu ai nevoie de ingrijiri medicale",
     notEnoughMoney = "Nu aveti suficienti bani, va trebuie $",
     medicalAssistantTreated = "Doctorul te-a tratat si ai platit $",
-    medicalAssistantRevive = "Te-ai trezit din lesin datorita doctorului si ai platit $"
+    medicalAssistantRevive = "Te-ai trezit din lesin datorita doctorului si ai platit $",
+
+    -- Take Items Sorry, not my Language
+    TakeItems1 = "Take nothing!",
+    TakeItems2 = "Take Items!",
+    TakeItems3 = "Take All!",
+    TakeItems4 = "Take Weapons!",
 }
