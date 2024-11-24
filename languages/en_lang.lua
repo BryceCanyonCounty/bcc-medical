@@ -36,7 +36,7 @@ Locales["en_lang"] = {
     revived = "You have been revived for ",
     notenough = "You do not have enough money!",
     doctoractive = "A Doctor is available, /alert instead",
-    doctoractive2 = "A Doctor is available, use voice instead", ----------- REMOVE
+    doctoractive2 = "A Doctor is available, alert has been sent", 
     you_do_not_have_job = "You are missing the job needed",
     cooldown = "Please wait ",
     doctorBag = "Doctors Bag",
@@ -64,8 +64,7 @@ Locales["en_lang"] = {
     notEnoughMoney = "You don't have enough money, you need $",
     medicalAssistantTreated = "The doctor treated you and you paid $",
     medicalAssistantRevive = "You were revived by the doctor and you paid $",
-
-    -- Take Items
+    medicalReportedMessage = "An urgent medical report has been made! Please intervene.",
     TakeItems1 = "Take nothing!",
     TakeItems2 = "Take Items!",
     TakeItems3 = "Take All!",

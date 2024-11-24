@@ -1,5 +1,14 @@
 local VORPcore = exports.vorp_core:GetCore()
 
+-- Helper function for debugging in DevMode
+if Config.devMode then
+    function devPrint(message)
+        print("^1[DEV MODE] ^4" .. message)
+    end
+else
+    function devPrint(message) end -- No-op if DevMode is disabled
+end
+
 local StaffTable = {}
 local TempHealed = {}
 
@@ -54,6 +63,7 @@ RegisterNetEvent('bcc-medical:AlertJobs', function()
     local user = VORPcore.getUser(src)
     if not user then return end
     local docs = 0
+    local pos = GetEntityCoords(GetPlayerPed(src))
     if Config.synsociety then
         if CheckPlayer(StaffTable, MedicJobs[1]) or CheckPlayer(StaffTable, MedicJobs[2]) then
             VORPcore.NotifyRightTip(src, _U('doctoractive'), 4000)
@@ -74,7 +84,9 @@ RegisterNetEvent('bcc-medical:AlertJobs', function()
         TriggerClientEvent('bcc-medical:CallNpcDoctor', src)
     else
         VORPcore.NotifyRightTip(src, _U('doctoractive2'), 4000)
-        --VORPcore.NotifyRightTip(src, _U('doctoractive'), 4000) -- Send /alert... needs to be added
+        if Config.Alerts then
+            AlertJob("medicalEmergency", _U('medicalReportedMessage'), { x = pos.x, y = pos.y, z = pos.z })
+        end
     end
 end)
 
@@ -495,5 +507,77 @@ function printTable(t)
         print("}")
     else
         sub_printTable(t, "  ")
+    end
+end
+
+function CheckAlertJob(src, alertType)
+    local user = VORPcore.getUser(src)
+    if not user then
+        devPrint("No user found for source " .. tostring(src))
+        return false
+    end
+
+    local character = user.getUsedCharacter
+    if not character then
+        devPrint("No character data available for source " .. tostring(src))
+        return false
+    end
+
+    local alertConfig = Config.alertPermissions[alertType]
+    if not alertConfig then
+        devPrint("No alert configuration found for alert type: " .. tostring(alertType))
+        return false
+    end
+
+    if not character.job or not character.jobGrade then
+        devPrint("Job or job grade data missing for source: " .. tostring(src))
+        return false
+    end
+
+    -- Check job eligibility and grade within the allowed range
+    local jobConfig = alertConfig.allowedJobs[character.job]
+    if jobConfig then
+        local jobGrade = tonumber(character.jobGrade)
+        if jobGrade >= jobConfig.minGrade and jobGrade <= jobConfig.maxGrade then
+            return true
+        else
+            devPrint("User does not meet job grade requirements for alert type: " ..
+            tostring(alertType) .. " with job: " .. character.job .. " at grade: " .. character.jobGrade)
+            return false
+        end
+    else
+        devPrint("Job " .. tostring(character.job) .. " not permitted for alert type: " .. tostring(alertType))
+        return false
+    end
+end
+
+-- Server-side function to alert users about specific events and include location data
+function AlertJob(alertType, message, coords)
+    local alertConfig = Config.alertPermissions[alertType]
+    if not alertConfig then
+        devPrint("Alert configuration missing for type: " .. alertType)
+        return
+    end
+
+    local users = VORPcore.getUsers()
+    for _, user in pairs(users) do
+        if user and CheckAlertJob(user.source, alertType) then
+            TriggerClientEvent('bcc-medical:notify', user.source, {
+                message = message,
+                notificationType = "alert",
+                x = coords.x,
+                y = coords.y,
+                z = coords.z,
+                blipSprite = alertConfig.blipSettings.blipSprite,
+                blipScale = alertConfig.blipSettings.blipScale,
+                blipColor = alertConfig.blipSettings.blipColor,
+                blipLabel = alertConfig.blipSettings.blipLabel,
+                blipDuration = alertConfig.blipSettings.blipDuration,
+                gpsRouteDuration = alertConfig.blipSettings.gpsRouteDuration, --- Newly added
+                useGpsRoute = true
+            })
+        else
+            devPrint("User does not match job requirements for " .. alertType .. ": " .. user.source)
+        end
     end
 end

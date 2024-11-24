@@ -36,7 +36,7 @@ Locales["ro_lang"] = {
     revived = "Ai fost reinviat pentru ",
     notenough = "Nu ai bani indeajuns!",
     doctoractive = "Un doctor este disponibil, foloseste /alert in loc",
-    doctoractive2 = "Un doctor este disponibil, foloseste vocea in loc",
+    doctoractive2 = "Un doctor este disponibil, alerta a fost trimisa",
     you_do_not_have_job = "Iti lipseste slujba necesara",
     cooldown = "Te rog asteapta ",
     doctorBag = "Geanta doctorului",
@@ -64,10 +64,11 @@ Locales["ro_lang"] = {
     notEnoughMoney = "Nu aveti suficienti bani, va trebuie $",
     medicalAssistantTreated = "Doctorul te-a tratat si ai platit $",
     medicalAssistantRevive = "Te-ai trezit din lesin datorita doctorului si ai platit $",
-
+    medicalReportedMessage = "A fost raportata o urgenta medicala! Va rugam sa interveniti.",
     -- Take Items Sorry, not my Language
     TakeItems1 = "Take nothing!",
     TakeItems2 = "Take Items!",
     TakeItems3 = "Take All!",
     TakeItems4 = "Take Weapons!",
+
 }

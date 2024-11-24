@@ -25,6 +25,10 @@ Planned to come: Checking cause of death plus some pretty UI stuff and more! ;)
 - Bandages and Revive items Config
 - Webhook for revivals
 - Doctors offices for collecting equipment
+- Alert with gps coordinates sending when doctor is online
+- Shaman item that allows players to skip the job check
+- Additional possibility to have the NPC-Doc take a percentage amount of money
+- Additional possibility for the NPC-Doc to steal items and/or weapons from the player inventory after being revived
 
 ## Bleeding
 - Database bleed values
@@ -60,3 +64,4 @@ Planned to come: Checking cause of death plus some pretty UI stuff and more! ;)
 
 ## GitHub
 - https://github.com/BryceCanyonCounty/bcc-medical
+- Need more help? Join the bcc discord here: https://discord.gg/VrZEEpBgZJ
