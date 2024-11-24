@@ -623,3 +623,38 @@ AddEventHandler('onResourceStop', function(resourceName)
         NpcDoctor = 0
     end
 end)
+
+RegisterNetEvent('bcc-medical:notify')
+AddEventHandler('bcc-medical:notify', function(data)
+    --clientDebugPrint("Received notification: " .. data.message)
+
+    -- Displaying the notification using VORP core method
+    VORPcore.NotifyLeft(data.message, "", "scoretimer_textures", "scoretimer_generic_cross", 5000)
+
+    -- Handling blip setup
+    if data.x and data.y and data.z then
+        if globalBlip then
+            BccUtils.Blips:RemoveBlip(globalBlip.rawblip) -- Cleanup any existing blip
+        end
+
+        globalBlip = BccUtils.Blips:SetBlip(data.blipLabel, data.blipSprite, data.blipScale, data.x, data.y, data.z)
+        SetTimeout(data.blipDuration, function()
+            BccUtils.Blips:RemoveBlip(globalBlip.rawblip)
+            globalBlip = nil -- Reset the global blip reference
+        end)
+
+        -- GPS route setup if required
+        if data.useGpsRoute then
+            StartGpsMultiRoute(GetHashKey("COLOR_RED"), true, true)
+            AddPointToGpsMultiRoute(data.x, data.y, data.z)
+            SetGpsMultiRouteRender(true)
+
+            -- Set a timeout to clear the GPS route after a specified duration
+            SetTimeout(data.gpsRouteDuration or data.blipDuration, function()
+                ClearGpsMultiRoute() -- This will clear the GPS route
+                SetGpsMultiRouteRender(false) -- Ensure it's no longer rendered on the map
+                --clientDebugPrint("GPS route cleared.")
+            end)
+        end
+    end
+end)

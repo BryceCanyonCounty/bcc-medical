@@ -25,7 +25,6 @@ Locales["de_lang"] = {
     you_do_not_have_job = "Du hast nicht den richtigen Job",
     cooldown = "Bitte warte ",
     Wound = "Meine Wunden: ",
-    
     PlayerMenu = 'Gesundheit',
     DoctorMenu = 'Doctor-Menü',
     quantity = "Menge: ",
@@ -54,7 +53,6 @@ Locales["de_lang"] = {
     onYourself = ", um mich selbst zu versorgen!",
     notBleeding = 'Ich habe keine Blutung!',
     patientNotBleeding = 'Mein Patient hat keine Blutung!',
-
     distance = "Distanz: ",
     meters = " Meter",
     tooFarFromPlayer = "Dein Patient ist zu weit weg",
@@ -66,8 +64,7 @@ Locales["de_lang"] = {
     notEnoughMoney = "You don't have enough money, you need $",
     medicalAssistantTreated = "The doctor treated you and you paid $",
     medicalAssistantRevive = "You were revived by the doctor and you paid $",
-
-    -- Take Items
+    medicalReportedMessage = "An urgent medical report has been made! Please intervene.",
     TakeItems1 = "Du siehst ja noch erbärmlicher aus, als ich. Aber etwas von deinem Geld will zu mir!",
     TakeItems2 = "Oh, schöne Sachen. Na die und dein Geld ist nun mein!",
     TakeItems3 = "Heute scheint dein Pechtag zu sein. All deins ist nun meins!",

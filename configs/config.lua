@@ -87,8 +87,8 @@ Config.doctors = {
     amount = 25,                -- Currency Amount or Percentage for Revive from NPC Doctor
     gonegative = false,         -- Can you go negative paying for NPC revival // Works only if useFixCost = true
     timer = 1,                  -- How many minutes between calls
-    toHospital = true,          -- if true, player will be respawned to nearby hospital else will be revived on spot
-    RandomRemove = true,        -- NPC Revive randomly takes items from the inventory. Either nothing, just items, just weapons or everything
+    toHospital = false,          -- if true, player will be respawned to nearby hospital else will be revived on spot
+    RandomRemove = false,        -- NPC Revive randomly takes items from the inventory. Either nothing, just items, just weapons or everything
 }
 -----------------------------------------------------
 
@@ -128,6 +128,27 @@ Config.MedicAssistantLocations = {
         NpcHeading = 252.48,
         NpcModel = 'CS_SDDoctor_01'
     }
+}
+
+Config.Alerts = true
+Config.alertPermissions = {
+    ["medicalEmergency"] = {
+        allowedJobs = {
+            doctor = { minGrade = 1, maxGrade = 5 },    -- Doctors of grade 1 to 5
+            doctorval = { minGrade = 1, maxGrade = 5 }, -- Doctors of grade 1 to 5
+            doctorstraw = { minGrade = 1, maxGrade = 5 }, -- Doctors of grade 1 to 5
+            doctorrho = { minGrade = 1, maxGrade = 5 }, -- Doctors of grade 1 to 5
+            --nurse = {minGrade = 2, maxGrade = 5}   -- Nurses of grade 2 to 5
+        },
+        blipSettings = {
+            blipLabel = "Medical Emergency",
+            blipSprite = 'blip_ambient_companion', -- Actual sprite name or hash
+            blipScale = 1.0,
+            blipColor = 1,
+            blipDuration = 60000,    -- Time in milliseconds
+            gpsRouteDuration = 30000 -- Time in milliseconds for GPS route
+        }
+    },
 }
 -----------------------------------------------------
 

@@ -64,8 +64,7 @@ Locales["fr_lang"] = {
     notEnoughMoney = "You don't have enough money, you need $",
     medicalAssistantTreated = "The doctor treated you and you paid $",
     medicalAssistantRevive = "You were revived by the doctor and you paid $",
-
-    -- Take Items Sorry, not my Language
+    medicalReportedMessage = "An urgent medical report has been made! Please intervene.",
     TakeItems1 = "Take nothing!",
     TakeItems2 = "Take Items!",
     TakeItems3 = "Take All!",
