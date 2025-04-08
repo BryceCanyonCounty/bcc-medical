@@ -536,7 +536,7 @@ function DamageHashCheck(damageHash)
     elseif Knives[hash] then
         damageType = _U('cut')
     elseif Blunt[hash] then
-        damageType = _U('bruised')
+        damageType = _U('bruise')
     elseif Guns[hash] then
         damageType = _U('shot')
     else
